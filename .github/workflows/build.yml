@@ -34,4 +34,4 @@ jobs:
     
     - name: Test claude-code
       run: |
-        nix run .#claude-code -- --version
+        ./result/bin/claude --version
