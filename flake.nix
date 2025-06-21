@@ -7,23 +7,23 @@
   };
 
   outputs = { self, nixpkgs, flake-utils }:
+    let
+      overlay = final: prev: {
+        claude-code = final.callPackage ./package.nix { };
+      };
+    in
     flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = import nixpkgs {
           inherit system;
           config.allowUnfree = true;
+          overlays = [ overlay ];
         };
-        
-        claude-code = pkgs.callPackage ./package.nix { };
       in
       {
         packages = {
-          default = claude-code;
-          claude-code = claude-code;
-        };
-
-        overlays.default = final: prev: {
-          claude-code = claude-code;
+          default = pkgs.claude-code;
+          claude-code = pkgs.claude-code;
         };
 
         devShells.default = pkgs.mkShell {
@@ -33,5 +33,7 @@
             cachix
           ];
         };
-      });
+      }) // {
+        overlays.default = overlay;
+      };
 }
