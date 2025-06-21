@@ -42,6 +42,11 @@ stdenv.mkDerivation rec {
     # Tell npm where to find certificates
     ${nodejs_20}/bin/npm config set cafile $SSL_CERT_FILE
     
+    # Configure npm to handle network issues better
+    ${nodejs_20}/bin/npm config set fetch-retries 5
+    ${nodejs_20}/bin/npm config set fetch-retry-mintimeout 20000
+    ${nodejs_20}/bin/npm config set fetch-retry-maxtimeout 120000
+    
     # Install claude-code from npm registry
     # --prefix=$out installs it to our output directory
     ${nodejs_20}/bin/npm install -g --prefix=$out @anthropic-ai/claude-code@${version}
