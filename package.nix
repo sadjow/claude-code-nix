@@ -61,11 +61,17 @@ stdenv.mkDerivation rec {
     # 1. Uses NODE_PATH to find modules without changing directory
     # 2. Runs claude from the user's current directory
     # 3. Passes all arguments through
+    # 4. Preserves the consistent path for settings
     mkdir -p $out/bin
     cat > $out/bin/claude << 'EOF'
     #!${bash}/bin/bash
     # Set NODE_PATH to find the claude-code modules
     export NODE_PATH="$out/lib/node_modules"
+    
+    # Set a consistent executable path for claude to prevent permission resets
+    # This makes macOS and claude think it's always the same binary
+    export CLAUDE_EXECUTABLE_PATH="$HOME/.local/bin/claude"
+    
     # Run claude from current directory
     exec ${nodejs_20}/bin/node --no-warnings --enable-source-maps "$out/lib/node_modules/@anthropic-ai/claude-code/cli.js" "$@"
     EOF
