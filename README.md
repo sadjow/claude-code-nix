@@ -6,6 +6,13 @@ Nix package for [Claude Code](https://claude.ai/code) - AI coding assistant in y
 
 When using development environment managers like devenv, asdf, or nvm, globally installed npm packages can become unavailable or incompatible. This Nix package bundles Claude Code with its own Node.js runtime, ensuring it's always available regardless of your project's Node.js version.
 
+### Key Features
+
+- **Bundled Node.js Runtime**: Always works regardless of project-specific Node.js versions
+- **Permission Persistence**: Maintains Claude settings and directory permissions across nix updates
+- **Stable Binary Path**: Uses `~/.local/bin/claude` symlink to prevent macOS permission resets
+- **Home Manager Integration**: Automatically preserves `.claude.json` and `.claude/` directory during switches
+
 ## Installation
 
 ### Using Nix Flakes
@@ -33,7 +40,9 @@ Add to your `flake.nix`:
 }
 ```
 
-### Using Home Manager
+### Using Home Manager (Recommended)
+
+For the best experience with automatic permission preservation:
 
 ```nix
 {
@@ -53,6 +62,33 @@ Add to your `flake.nix`:
       ];
     };
   };
+}
+```
+
+To enable automatic permission preservation, create `~/.config/nixpkgs/home-manager/modules/claude-code.nix`:
+
+```nix
+{ config, pkgs, lib, ... }:
+
+{
+  # Create stable binary path
+  home.activation.claudeStableLink = lib.hm.dag.entryAfter ["writeBoundary"] ''
+    mkdir -p $HOME/.local/bin
+    rm -f $HOME/.local/bin/claude
+    ln -s ${pkgs.claude-code}/bin/claude $HOME/.local/bin/claude
+  '';
+
+  # Add to PATH
+  home.sessionPath = [ "$HOME/.local/bin" ];
+  
+  # Preserve config during switches
+  home.activation.preserveClaudeConfig = lib.hm.dag.entryBefore ["writeBoundary"] ''
+    [ -f "$HOME/.claude.json" ] && cp -p "$HOME/.claude.json" "$HOME/.claude.json.backup" || true
+  '';
+  
+  home.activation.restoreClaudeConfig = lib.hm.dag.entryAfter ["writeBoundary"] ''
+    [ -f "$HOME/.claude.json.backup" ] && [ ! -f "$HOME/.claude.json" ] && cp -p "$HOME/.claude.json.backup" "$HOME/.claude.json" || true
+  '';
 }
 ```
 
@@ -103,6 +139,25 @@ To update to a newer version of Claude Code:
 1. Edit `package.nix` and change the `version` field
 2. Build and test locally
 3. Submit a pull request
+
+## Troubleshooting
+
+### Claude asks for permissions after every update
+
+This package includes fixes for permission persistence. If you're still experiencing issues:
+
+1. Ensure you're using the Home Manager configuration with the claude-code module
+2. Check that `~/.local/bin/claude` symlink exists
+3. Run `claude` from `~/.local/bin/claude` instead of the nix store path
+4. Your `.claude.json` and `.claude/` directory should be preserved across updates
+
+### Manual permission reset
+
+If you need to reset Claude's permissions:
+
+```bash
+rm -rf ~/.claude ~/.claude.json
+```
 
 ## License
 
