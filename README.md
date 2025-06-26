@@ -134,11 +134,26 @@ nix develop
 
 ## Updating Claude Code Version
 
-To update to a newer version of Claude Code:
+### Automated Updates
+
+This repository uses GitHub Actions to automatically check for new Claude Code versions daily. When a new version is detected:
+
+1. A pull request is automatically created with the version update
+2. Tests run on both Ubuntu and macOS to verify the build
+3. The PR includes a checklist for manual verification
+
+The automated update workflow runs:
+- Daily at midnight UTC
+- On manual trigger via GitHub Actions UI
+
+### Manual Updates
+
+To manually update to a newer version of Claude Code:
 
 1. Edit `package.nix` and change the `version` field
-2. Build and test locally
-3. Submit a pull request
+2. Build and test locally: `nix build && ./result/bin/claude --version`
+3. Update `flake.lock`: `nix flake update`
+4. Submit a pull request
 
 ## Troubleshooting
 
