@@ -5,9 +5,16 @@ on:
   pull_request:
     branches: [ main ]
   workflow_dispatch:
+  workflow_run:
+    workflows: ["Update Claude Code Version"]
+    types:
+      - completed
+    branches: [ main ]
 
 jobs:
   build:
+    # Only run if not triggered by workflow_run or if the workflow succeeded
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
