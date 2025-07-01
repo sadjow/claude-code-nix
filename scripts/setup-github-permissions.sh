@@ -25,17 +25,22 @@ MANUAL CONFIGURATION REQUIRED
 
 To complete the setup, you need to manually configure the following in GitHub:
 
+### Step 1: GitHub Actions Permissions
 1. Go to: https://github.com/$REPO/settings/actions
-
 2. Scroll down to "Workflow permissions"
-
 3. Select: "Read and write permissions"
-
 4. Check: "Allow GitHub Actions to create and approve pull requests"
-
 5. Click "Save"
 
-This will allow the automated update workflow to create pull requests.
+### Step 2: Enable Auto-Merge
+1. Go to: https://github.com/$REPO/settings
+2. Under "Pull Requests" section
+3. Check: "Allow auto-merge"
+4. Click "Save"
+
+This will allow the automated update workflow to:
+- Create pull requests
+- Automatically merge them when CI passes
 
 ================================================================
 

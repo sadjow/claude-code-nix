@@ -68,6 +68,7 @@ jobs:
 
       - name: Create Pull Request
         if: steps.check.outputs.update_needed == 'true'
+        id: create-pr
         uses: peter-evans/create-pull-request@v6
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -102,6 +103,11 @@ jobs:
           labels: |
             dependencies
             automated
+      
+      - name: Enable Auto-Merge
+        if: steps.check.outputs.update_needed == 'true' && steps.create-pr.outputs.pull-request-number
+        run: |
+          gh pr merge ${{ steps.create-pr.outputs.pull-request-number }} --auto --squash
 
       - name: Summary
         if: always()
