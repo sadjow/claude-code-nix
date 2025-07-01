@@ -72,6 +72,9 @@ stdenv.mkDerivation rec {
     # This makes macOS and claude think it's always the same binary
     export CLAUDE_EXECUTABLE_PATH="$HOME/.local/bin/claude"
     
+    # Disable automatic update checks since updates should go through Nix
+    export DISABLE_AUTOUPDATER=1
+    
     # Run claude from current directory
     exec ${nodejs_20}/bin/node --no-warnings --enable-source-maps "$out/lib/node_modules/@anthropic-ai/claude-code/cli.js" "$@"
     EOF
