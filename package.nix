@@ -6,11 +6,11 @@
 # Problem: When using devenv, asdf, or other Node.js version managers,
 # Claude Code installed via npm might not be available or compatible.
 #
-# Solution: Install Claude Code through Nix with a bundled Node.js v20 runtime.
+# Solution: Install Claude Code through Nix with a bundled Node.js v22 runtime.
 
 { lib
 , stdenv
-, nodejs_20
+, nodejs_22
 , cacert
 , bash
 }:
@@ -24,7 +24,7 @@ stdenv.mkDerivation rec {
 
   # Build dependencies
   nativeBuildInputs = [ 
-    nodejs_20   # Use Node.js v20 for compatibility
+    nodejs_22   # Use Node.js v22 LTS for compatibility
     cacert      # SSL certificates for npm
   ];
   
@@ -40,16 +40,16 @@ stdenv.mkDerivation rec {
     export NODE_EXTRA_CA_CERTS=$SSL_CERT_FILE
     
     # Tell npm where to find certificates
-    ${nodejs_20}/bin/npm config set cafile $SSL_CERT_FILE
+    ${nodejs_22}/bin/npm config set cafile $SSL_CERT_FILE
     
     # Configure npm to handle network issues better
-    ${nodejs_20}/bin/npm config set fetch-retries 5
-    ${nodejs_20}/bin/npm config set fetch-retry-mintimeout 20000
-    ${nodejs_20}/bin/npm config set fetch-retry-maxtimeout 120000
+    ${nodejs_22}/bin/npm config set fetch-retries 5
+    ${nodejs_22}/bin/npm config set fetch-retry-mintimeout 20000
+    ${nodejs_22}/bin/npm config set fetch-retry-maxtimeout 120000
     
     # Install claude-code from npm registry
     # --prefix=$out installs it to our output directory
-    ${nodejs_20}/bin/npm install -g --prefix=$out @anthropic-ai/claude-code@${version}
+    ${nodejs_22}/bin/npm install -g --prefix=$out @anthropic-ai/claude-code@${version}
   '';
 
   installPhase = ''
@@ -86,7 +86,7 @@ stdenv.mkDerivation rec {
         exit 0
     fi
     # Pass through to bundled npm for other commands
-    exec ${nodejs_20}/bin/npm "$@"
+    exec ${nodejs_22}/bin/npm "$@"
     NPM_EOF
     chmod +x "$_CLAUDE_NPM_WRAPPER"
     
@@ -94,7 +94,7 @@ stdenv.mkDerivation rec {
     export PATH="$(dirname "$_CLAUDE_NPM_WRAPPER"):$PATH"
     
     # Run claude from current directory
-    exec ${nodejs_20}/bin/node --no-warnings --enable-source-maps "$out/lib/node_modules/@anthropic-ai/claude-code/cli.js" "$@"
+    exec ${nodejs_22}/bin/node --no-warnings --enable-source-maps "$out/lib/node_modules/@anthropic-ai/claude-code/cli.js" "$@"
     EOF
     chmod +x $out/bin/claude
     
