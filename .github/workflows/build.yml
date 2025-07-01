@@ -31,6 +31,7 @@ jobs:
           sandbox = false
     
     - uses: cachix/cachix-action@v14
+      if: github.ref == 'refs/heads/main'
       with:
         name: claude-code
         authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
@@ -38,6 +39,10 @@ jobs:
     - name: Build claude-code
       run: |
         nix build .#claude-code
+    
+    - name: Push to Cachix
+      if: github.ref == 'refs/heads/main'
+      run: |
         nix build .#claude-code --json | jq -r '.[].outputs.out' | cachix push claude-code
     
     - name: Test claude-code
