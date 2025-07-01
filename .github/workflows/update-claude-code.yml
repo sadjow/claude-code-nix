@@ -64,7 +64,7 @@ jobs:
           . /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh
           
           # Update flake.lock
-          nix flake update
+          nix flake update --extra-experimental-features 'nix-command flakes'
 
       - name: Create Pull Request
         if: steps.check.outputs.update_needed == 'true'
