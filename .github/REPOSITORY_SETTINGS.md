@@ -12,18 +12,10 @@ This repository requires specific GitHub settings to enable automated updates.
    - Check **"Allow GitHub Actions to create and approve pull requests"**
 3. Click Save
 
-### Auto-Merge Settings
-
-1. Navigate to Settings → General
-2. Under "Pull Requests":
-   - Check **"Allow auto-merge"**
-3. Click Save
-
 These settings allow the `update-claude-code.yml` workflow to:
 - Modify files in the repository
 - Create pull requests for version updates
 - Update the flake.lock file
-- Automatically merge PRs when all checks pass
 
 ## Verification
 
