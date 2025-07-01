@@ -35,3 +35,4 @@ If you see the error "GitHub Actions is not permitted to create or approve pull 
 - Ensure the settings above are properly configured
 - The repository must not have branch protection rules that prevent GitHub Actions from creating PRs
 - The workflow uses the built-in `GITHUB_TOKEN` which is automatically provided
+
