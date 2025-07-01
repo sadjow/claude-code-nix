@@ -75,6 +75,24 @@ stdenv.mkDerivation rec {
     # Disable automatic update checks since updates should go through Nix
     export DISABLE_AUTOUPDATER=1
     
+    # Create a temporary npm wrapper that Claude Code will use internally
+    # This ensures it doesn't interfere with project npm versions
+    export _CLAUDE_NPM_WRAPPER="$(mktemp -d)/npm"
+    cat > "$_CLAUDE_NPM_WRAPPER" << 'NPM_EOF'
+    #!${bash}/bin/bash
+    # Intercept npm commands that might trigger update checks
+    if [[ "$1" = "update" ]] || [[ "$1" = "outdated" ]] || [[ "$1" = "view" && "$2" =~ @anthropic-ai/claude-code ]]; then
+        echo "Updates are managed through Nix. Current version: ${version}"
+        exit 0
+    fi
+    # Pass through to bundled npm for other commands
+    exec ${nodejs_20}/bin/npm "$@"
+    NPM_EOF
+    chmod +x "$_CLAUDE_NPM_WRAPPER"
+    
+    # Only add our npm wrapper to PATH for Claude Code's internal use
+    export PATH="$(dirname "$_CLAUDE_NPM_WRAPPER"):$PATH"
+    
     # Run claude from current directory
     exec ${nodejs_20}/bin/node --no-warnings --enable-source-maps "$out/lib/node_modules/@anthropic-ai/claude-code/cli.js" "$@"
     EOF
