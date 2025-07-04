@@ -102,18 +102,32 @@ nix run github:sadjow/claude-code-nix
 nix profile install github:sadjow/claude-code-nix
 ```
 
-## Using Cachix
+## Using Cachix (Recommended)
 
-To avoid building from source, you can use our Cachix cache:
+To avoid building from source and get instant installation, use our Cachix cache:
+
+### One-time setup
+
+```bash
+# Install cachix if you haven't already
+nix-env -iA cachix -f https://cachix.org/api/v1/install
+
+# Configure the claude-code cache
+cachix use claude-code
+```
+
+### Or add to your configuration
 
 ```nix
 {
   nix.settings = {
     substituters = [ "https://claude-code.cachix.org" ];
-    trusted-public-keys = [ "claude-code.cachix.org-1:<PUBLIC-KEY>" ];
+    trusted-public-keys = [ "claude-code.cachix.org-1:YeXf2aNu7UTX8Vwrze0za1WEDS+4DuI2kVeWEE4fsRk=" ];
   };
 }
 ```
+
+With cachix configured, all installation methods will download pre-built binaries instead of compiling from source.
 
 ## Development
 
@@ -126,7 +140,7 @@ cd claude-code-nix
 nix build
 
 # Run tests
-nix run .#claude-code -- --version
+nix run . -- --version
 
 # Enter development shell
 nix develop

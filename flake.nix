@@ -25,6 +25,17 @@
           default = pkgs.claude-code;
           claude-code = pkgs.claude-code;
         };
+        
+        apps = {
+          default = {
+            type = "app";
+            program = "${pkgs.claude-code}/bin/claude";
+          };
+          claude-code = {
+            type = "app";
+            program = "${pkgs.claude-code}/bin/claude";
+          };
+        };
 
         devShells.default = pkgs.mkShell {
           buildInputs = with pkgs; [
