@@ -1,10 +1,21 @@
 # claude-code-nix
 
-Nix package for [Claude Code](https://claude.ai/code) - AI coding assistant in your terminal.
+Always up-to-date Nix package for [Claude Code](https://claude.ai/code) - AI coding assistant in your terminal.
+
+**🚀 Automatically updated daily** to ensure you always have the latest Claude Code version.
 
 ## Why this package?
 
 When using development environment managers like devenv, asdf, or nvm, globally installed npm packages can become unavailable or incompatible. This Nix package bundles Claude Code with its own Node.js runtime, ensuring it's always available regardless of your project's Node.js version.
+
+### Always Up-to-Date
+
+While Claude Code may be available in nixpkgs, it's not always using the latest version. This repository:
+
+- **Automatically checks for new Claude Code versions daily** via GitHub Actions
+- **Creates pull requests immediately** when updates are available
+- **Ensures you always have access to the latest features** without waiting for nixpkgs updates
+- **Provides pre-built binaries via Cachix** for instant installation
 
 ### Key Features
 
