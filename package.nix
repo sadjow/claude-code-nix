@@ -17,7 +17,7 @@
 
 stdenv.mkDerivation rec {
   pname = "claude-code";
-  version = "1.0.56";  # Update this to install a newer version
+  version = "1.0.58";  # Update this to install a newer version
 
   # Don't try to unpack a source tarball - we'll download via npm
   dontUnpack = true;
