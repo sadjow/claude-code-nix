@@ -180,6 +180,14 @@ To manually update to a newer version of Claude Code:
 
 ## Troubleshooting
 
+### Known Issues
+
+#### "Claude symlink points to invalid binary" warning
+
+When running `claude /status`, you may see a warning: "Claude symlink points to invalid binary: /nix/store/.../bin/claude"
+
+**This is a false positive and can be safely ignored.** The warning occurs because Claude Code's validation expects a large binary file (>10MB), but Nix packages Claude as a wrapper script that launches Node.js with the actual CLI code. This is standard practice in Nix packaging and everything works correctly despite the warning.
+
 ### Claude asks for permissions after every update
 
 This package includes fixes for permission persistence. If you're still experiencing issues:
