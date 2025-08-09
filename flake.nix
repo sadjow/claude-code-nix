@@ -8,8 +8,28 @@
 
   outputs = { self, nixpkgs, flake-utils }:
     let
+      claudeCodeVersion = "1.0.72";
+      claudeCodeSrcHash = "sha256-1vIElqZ5sk62o1amdfOqhmSG4B5wzKWDLcCgvQO4a5o=";
+      claudeCodeNpmDepsHash = "sha256-LkQf2lW6TM1zRr10H7JgtnE+dy0CE7WCxF4GhTd4GT4=";
+      
       overlay = final: prev: {
-        claude-code = final.callPackage ./package.nix { };
+        claude-code = prev.claude-code.overrideAttrs (oldAttrs: rec {
+          version = claudeCodeVersion;
+          
+          src = final.fetchzip {
+            url = "https://registry.npmjs.org/@anthropic-ai/claude-code/-/claude-code-${version}.tgz";
+            hash = claudeCodeSrcHash;
+          };
+          
+          npmDepsHash = claudeCodeNpmDepsHash;
+          
+          postInstall = ''
+            wrapProgram $out/bin/claude \
+              --set DISABLE_AUTOUPDATER 1 \
+              --set CLAUDE_EXECUTABLE_PATH "\$HOME/.local/bin/claude" \
+              --unset DEV
+          '';
+        });
       };
     in
     flake-utils.lib.eachDefaultSystem (system:
