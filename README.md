@@ -6,29 +6,25 @@ Always up-to-date Nix package for [Claude Code](https://claude.ai/code) - AI cod
 
 ## Why this package?
 
-When using development environment managers like devenv, asdf, or nvm, globally installed npm packages can become unavailable or incompatible. This Nix package provides:
+This flake provides the nixpkgs claude-code package with key advantages:
 
-1. **Bundled Node.js runtime**: Claude Code runs with its own Node.js 20, independent of your project's Node.js version
-2. **Always up-to-date**: Daily automated updates with pre-built binaries cached in Cachix for instant installation
-3. **Based on nixpkgs**: Leverages the battle-tested upstream nixpkgs package as foundation
+### Compared to npm installation
+- **Bundled Node.js runtime**: Works independently of your project's Node.js version (no npm/nvm conflicts)
+- **Declarative and reproducible**: Managed through Nix, not global npm state
+- **No permission issues**: Nix handles all file permissions correctly
 
-### Always Up-to-Date
+### Compared to nixpkgs claude-code
+- **Always up-to-date**: Daily automated updates vs waiting for nixpkgs PRs to be merged
+- **Pre-built binaries**: Cachix provides instant installation without compilation
+- **Latest features immediately**: Get new Claude Code versions the day they're released
 
-While Claude Code is available in nixpkgs, it's not always using the latest version. This repository:
+### How it works
 
-- **Automatically checks for new Claude Code versions daily** via GitHub Actions
-- **Creates pull requests immediately** when updates are available
-- **Ensures you always have access to the latest features** without waiting for nixpkgs updates
-- **Provides pre-built binaries via Cachix** for instant installation
-
-### Key Features
-
-- **Independent Node.js runtime**: Bundled Node.js 20 works regardless of project Node.js version
-- **Based on nixpkgs**: Uses the battle-tested upstream nixpkgs package as foundation
-- **Sandbox-safe builds**: Works correctly in sandboxed Nix environments (NixOS default)
-- **Automated version updates**: Daily checks with automatic hash calculation
-- **Pre-built binaries**: Cachix cache provides instant installation without compilation
-- **Home Manager Integration**: Automatically preserves `.claude.json` and `.claude/` directory during switches
+- **Based on nixpkgs**: Uses the upstream nixpkgs claude-code package as foundation
+- **Daily automation**: GitHub Actions checks for new versions every day at midnight UTC
+- **Automatic updates**: Creates PRs with version bumps and calculated hashes
+- **Pre-built binaries**: Successful builds are cached to Cachix for all users
+- **Instant availability**: New versions available immediately, not weeks later
 
 ## Quick Start
 
