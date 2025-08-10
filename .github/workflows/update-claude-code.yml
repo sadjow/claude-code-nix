@@ -26,8 +26,8 @@ jobs:
       - name: Check for updates
         id: check
         run: |
-          # Get current version from package.nix
-          CURRENT_VERSION=$(grep -oP 'version = "\K[^"]+' package.nix)
+          # Get current version from flake.nix
+          CURRENT_VERSION=$(grep -oP 'claudeCodeVersion = "\K[^"]+' flake.nix)
           echo "Current version: $CURRENT_VERSION"
           
           # Get latest version from npm
@@ -45,26 +45,48 @@ jobs:
             echo "update_needed=false" >> $GITHUB_OUTPUT
           fi
 
-      - name: Update version in package.nix
+      - name: Setup Nix
+        if: steps.check.outputs.update_needed == 'true'
+        uses: cachix/install-nix-action@v24
+        with:
+          nix_path: nixpkgs=channel:nixos-unstable
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+            access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update version and hashes in flake.nix
         if: steps.check.outputs.update_needed == 'true'
         run: |
-          # Update version in package.nix
-          sed -i "s/version = \".*\"/version = \"${{ steps.check.outputs.latest }}\"/" package.nix
+          LATEST_VERSION="${{ steps.check.outputs.latest }}"
           
-          # Also update the comment to reflect the change
-          sed -i "s/# Update this to install a newer version/# Update this to install a newer version/" package.nix
+          # Update version
+          sed -i "s/claudeCodeVersion = \".*\"/claudeCodeVersion = \"$LATEST_VERSION\"/" flake.nix
+          
+          # Get the new source hash
+          SRC_URL="https://registry.npmjs.org/@anthropic-ai/claude-code/-/claude-code-$LATEST_VERSION.tgz"
+          SRC_HASH=$(nix-prefetch-url --type sha256 --unpack "$SRC_URL" 2>/dev/null | tail -1)
+          SRC_HASH_SRI=$(nix hash to-sri --type sha256 "$SRC_HASH")
+          
+          # Update source hash
+          sed -i "s|claudeCodeSrcHash = \".*\"|claudeCodeSrcHash = \"$SRC_HASH_SRI\"|" flake.nix
+          
+          # Build to get npm deps hash (this will fail but give us the correct hash)
+          echo "Building to get npm deps hash..."
+          if ! nix build .#claude-code 2>&1 | tee build.log; then
+            # Extract the correct npm deps hash from the error message
+            NPM_DEPS_HASH=$(grep "got:" build.log | head -1 | awk '{print $2}')
+            if [ -n "$NPM_DEPS_HASH" ]; then
+              sed -i "s|claudeCodeNpmDepsHash = \".*\"|claudeCodeNpmDepsHash = \"$NPM_DEPS_HASH\"|" flake.nix
+            fi
+          fi
+          
+          # Try building again to verify
+          nix build .#claude-code
 
       - name: Update flake.lock
         if: steps.check.outputs.update_needed == 'true'
         run: |
-          # Install Nix
-          curl -L https://nixos.org/nix/install | sh -s -- --daemon --yes
-          
-          # Source Nix
-          . /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh
-          
-          # Update flake.lock
-          nix flake update --extra-experimental-features 'nix-command flakes'
+          nix flake update
 
       - name: Create Pull Request
         if: steps.check.outputs.update_needed == 'true'
@@ -80,14 +102,16 @@ jobs:
             This PR updates Claude Code from version `${{ steps.check.outputs.current }}` to `${{ steps.check.outputs.latest }}`.
             
             ### Changes
-            - Updated `version` in `package.nix`
-            - Updated `flake.lock` with new derivation hash
+            - Updated `claudeCodeVersion` in `flake.nix`
+            - Updated `claudeCodeSrcHash` with new tarball hash
+            - Updated `claudeCodeNpmDepsHash` with new npm dependencies hash
+            - Updated `flake.lock`
             
-            ### Verification Checklist
-            - [ ] Version number is correctly updated in `package.nix`
-            - [ ] `flake.lock` has been updated
-            - [ ] The new version builds successfully
-            - [ ] Basic functionality works as expected
+            ### Verification
+            - ✅ Version number updated in `flake.nix`
+            - ✅ Source and npm deps hashes automatically updated
+            - ✅ Build verified during CI
+            - ✅ All changes automated
             
             ---
             
