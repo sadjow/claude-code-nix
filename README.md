@@ -6,7 +6,11 @@ Always up-to-date Nix package for [Claude Code](https://claude.ai/code) - AI cod
 
 ## Why this package?
 
-When using development environment managers like devenv, asdf, or nvm, globally installed npm packages can become unavailable or incompatible. This Nix package leverages the upstream nixpkgs claude-code package while ensuring it's always up-to-date.
+When using development environment managers like devenv, asdf, or nvm, globally installed npm packages can become unavailable or incompatible. This Nix package provides:
+
+1. **Bundled Node.js runtime**: Claude Code runs with its own Node.js 20, independent of your project's Node.js version
+2. **Always up-to-date**: Daily automated updates with pre-built binaries cached in Cachix for instant installation
+3. **Based on nixpkgs**: Leverages the battle-tested upstream nixpkgs package as foundation
 
 ### Always Up-to-Date
 
@@ -19,9 +23,11 @@ While Claude Code is available in nixpkgs, it's not always using the latest vers
 
 ### Key Features
 
+- **Independent Node.js runtime**: Bundled Node.js 20 works regardless of project Node.js version
 - **Based on nixpkgs**: Uses the battle-tested upstream nixpkgs package as foundation
 - **Sandbox-safe builds**: Works correctly in sandboxed Nix environments (NixOS default)
 - **Automated version updates**: Daily checks with automatic hash calculation
+- **Pre-built binaries**: Cachix cache provides instant installation without compilation
 - **Home Manager Integration**: Automatically preserves `.claude.json` and `.claude/` directory during switches
 
 ## Quick Start
