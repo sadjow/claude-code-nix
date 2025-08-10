@@ -6,11 +6,11 @@ Always up-to-date Nix package for [Claude Code](https://claude.ai/code) - AI cod
 
 ## Why this package?
 
-When using development environment managers like devenv, asdf, or nvm, globally installed npm packages can become unavailable or incompatible. This Nix package bundles Claude Code with its own Node.js runtime, ensuring it's always available regardless of your project's Node.js version.
+When using development environment managers like devenv, asdf, or nvm, globally installed npm packages can become unavailable or incompatible. This Nix package leverages the upstream nixpkgs claude-code package while ensuring it's always up-to-date.
 
 ### Always Up-to-Date
 
-While Claude Code may be available in nixpkgs, it's not always using the latest version. This repository:
+While Claude Code is available in nixpkgs, it's not always using the latest version. This repository:
 
 - **Automatically checks for new Claude Code versions daily** via GitHub Actions
 - **Creates pull requests immediately** when updates are available
@@ -19,9 +19,9 @@ While Claude Code may be available in nixpkgs, it's not always using the latest 
 
 ### Key Features
 
-- **Bundled Node.js Runtime**: Always works regardless of project-specific Node.js versions
-- **Permission Persistence**: Maintains Claude settings and directory permissions across nix updates
-- **Stable Binary Path**: Uses `~/.local/bin/claude` symlink to prevent macOS permission resets
+- **Based on nixpkgs**: Uses the battle-tested upstream nixpkgs package as foundation
+- **Sandbox-safe builds**: Works correctly in sandboxed Nix environments (NixOS default)
+- **Automated version updates**: Daily checks with automatic hash calculation
 - **Home Manager Integration**: Automatically preserves `.claude.json` and `.claude/` directory during switches
 
 ## Quick Start
@@ -151,6 +151,9 @@ nix build
 # Run tests
 nix run . -- --version
 
+# Check for version updates
+./scripts/update-version.sh --check
+
 # Enter development shell
 nix develop
 ```
@@ -162,8 +165,9 @@ nix develop
 This repository uses GitHub Actions to automatically check for new Claude Code versions daily. When a new version is detected:
 
 1. A pull request is automatically created with the version update
-2. Tests run on both Ubuntu and macOS to verify the build
-3. The PR includes a checklist for manual verification
+2. All hashes are automatically calculated (source and npm dependencies)
+3. Tests run on both Ubuntu and macOS to verify the build
+4. The PR auto-merges if all checks pass
 
 The automated update workflow runs:
 - Daily at midnight UTC
@@ -171,12 +175,40 @@ The automated update workflow runs:
 
 ### Manual Updates
 
-To manually update to a newer version of Claude Code:
+#### Using the Update Script (Recommended)
 
-1. Edit `package.nix` and change the `version` field
-2. Build and test locally: `nix build && ./result/bin/claude --version`
-3. Update `flake.lock`: `nix flake update`
-4. Submit a pull request
+```bash
+# Check for updates
+./scripts/update-version.sh --check
+
+# Update to latest version
+./scripts/update-version.sh
+
+# Update to specific version
+./scripts/update-version.sh --version 1.0.73
+
+# Show help
+./scripts/update-version.sh --help
+```
+
+The script automatically:
+- Updates the version in `flake.nix`
+- Fetches and calculates the source tarball hash
+- Builds the package to determine the npm dependencies hash
+- Updates `flake.lock` with latest nixpkgs
+- Verifies the build succeeds
+
+#### Manual Process
+
+If you prefer to update manually:
+
+1. Edit `flake.nix` and change `claudeCodeVersion`
+2. Get the source hash: `nix-prefetch-url --type sha256 --unpack https://registry.npmjs.org/@anthropic-ai/claude-code/-/claude-code-VERSION.tgz`
+3. Update `claudeCodeSrcHash` with the result
+4. Build to get npm deps hash: `nix build` (will fail with correct hash)
+5. Update `claudeCodeNpmDepsHash` with the hash from error message
+6. Build again to verify: `nix build && ./result/bin/claude --version`
+7. Submit a pull request
 
 ## Troubleshooting
 
