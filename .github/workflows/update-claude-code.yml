@@ -23,30 +23,7 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Check for updates
-        id: check
-        run: |
-          # Get current version from flake.nix
-          CURRENT_VERSION=$(grep -oP 'claudeCodeVersion = "\K[^"]+' flake.nix)
-          echo "Current version: $CURRENT_VERSION"
-          
-          # Get latest version from npm
-          LATEST_VERSION=$(npm view @anthropic-ai/claude-code version)
-          echo "Latest version: $LATEST_VERSION"
-          
-          # Set outputs
-          echo "current=$CURRENT_VERSION" >> $GITHUB_OUTPUT
-          echo "latest=$LATEST_VERSION" >> $GITHUB_OUTPUT
-          
-          # Check if update is needed
-          if [ "$CURRENT_VERSION" != "$LATEST_VERSION" ]; then
-            echo "update_needed=true" >> $GITHUB_OUTPUT
-          else
-            echo "update_needed=false" >> $GITHUB_OUTPUT
-          fi
-
       - name: Setup Nix
-        if: steps.check.outputs.update_needed == 'true'
         uses: cachix/install-nix-action@v24
         with:
           nix_path: nixpkgs=channel:nixos-unstable
@@ -54,39 +31,27 @@ jobs:
             experimental-features = nix-command flakes
             access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
 
-      - name: Update version and hashes in flake.nix
-        if: steps.check.outputs.update_needed == 'true'
+      - name: Check for updates
+        id: check
         run: |
-          LATEST_VERSION="${{ steps.check.outputs.latest }}"
-          
-          # Update version
-          sed -i "s/claudeCodeVersion = \".*\"/claudeCodeVersion = \"$LATEST_VERSION\"/" flake.nix
-          
-          # Get the new source hash
-          SRC_URL="https://registry.npmjs.org/@anthropic-ai/claude-code/-/claude-code-$LATEST_VERSION.tgz"
-          SRC_HASH=$(nix-prefetch-url --type sha256 --unpack "$SRC_URL" 2>/dev/null | tail -1)
-          SRC_HASH_SRI=$(nix hash to-sri --type sha256 "$SRC_HASH")
-          
-          # Update source hash
-          sed -i "s|claudeCodeSrcHash = \".*\"|claudeCodeSrcHash = \"$SRC_HASH_SRI\"|" flake.nix
-          
-          # Build to get npm deps hash (this will fail but give us the correct hash)
-          echo "Building to get npm deps hash..."
-          if ! nix build .#claude-code 2>&1 | tee build.log; then
-            # Extract the correct npm deps hash from the error message
-            NPM_DEPS_HASH=$(grep "got:" build.log | head -1 | awk '{print $2}')
-            if [ -n "$NPM_DEPS_HASH" ]; then
-              sed -i "s|claudeCodeNpmDepsHash = \".*\"|claudeCodeNpmDepsHash = \"$NPM_DEPS_HASH\"|" flake.nix
-            fi
+          # Use the update script to check for updates
+          if ./scripts/update-version.sh --check; then
+            echo "update_needed=false" >> $GITHUB_OUTPUT
+          else
+            # Extract versions from script output
+            CURRENT_VERSION=$(./scripts/update-version.sh --check 2>&1 | grep "Current version:" | cut -d: -f2 | xargs)
+            LATEST_VERSION=$(./scripts/update-version.sh --check 2>&1 | grep "Latest version:" | cut -d: -f2 | xargs)
+            
+            echo "current=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+            echo "latest=$LATEST_VERSION" >> $GITHUB_OUTPUT
+            echo "update_needed=true" >> $GITHUB_OUTPUT
           fi
-          
-          # Try building again to verify
-          nix build .#claude-code
 
-      - name: Update flake.lock
+      - name: Update version and hashes
         if: steps.check.outputs.update_needed == 'true'
         run: |
-          nix flake update
+          # Run the update script
+          ./scripts/update-version.sh
 
       - name: Create Pull Request
         if: steps.check.outputs.update_needed == 'true'
