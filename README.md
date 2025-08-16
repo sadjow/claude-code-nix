@@ -2,7 +2,7 @@
 
 Always up-to-date Nix package for [Claude Code](https://claude.ai/code) - AI coding assistant in your terminal.
 
-**🚀 Automatically updated daily** to ensure you always have the latest Claude Code version.
+**🚀 Automatically updated hourly** to ensure you always have the latest Claude Code version.
 
 ## Why this package?
 
@@ -79,9 +79,23 @@ While Claude Code exists in nixpkgs, our approach offers specific advantages:
 
 ## Quick Start
 
-### Step 1: Enable Cachix (Recommended)
+### Fastest Installation (Try it now!)
 
-To get instant installation with pre-built binaries:
+```bash
+# Run Claude Code directly without installing
+nix run github:sadjow/claude-code-nix
+```
+
+### Install to Your System
+
+```bash
+# Install to your profile (survives reboots)
+nix profile install github:sadjow/claude-code-nix
+```
+
+### Optional: Enable Binary Cache for Faster Installation
+
+To download pre-built binaries instead of compiling:
 
 ```bash
 # Install cachix if you haven't already
@@ -91,7 +105,7 @@ nix-env -iA cachix -f https://cachix.org/api/v1/install
 cachix use claude-code
 ```
 
-Alternatively, add to your Nix configuration:
+Or add to your Nix configuration:
 
 ```nix
 {
@@ -100,18 +114,6 @@ Alternatively, add to your Nix configuration:
     trusted-public-keys = [ "claude-code.cachix.org-1:YeXf2aNu7UTX8Vwrze0za1WEDS+4DuI2kVeWEE4fsRk=" ];
   };
 }
-```
-
-### Step 2: Install Claude Code
-
-#### Direct Installation (Simplest)
-
-```bash
-# Run directly
-nix run github:sadjow/claude-code-nix
-
-# Or install to profile
-nix profile install github:sadjow/claude-code-nix
 ```
 
 #### Using Nix Flakes
@@ -139,9 +141,9 @@ Add to your `flake.nix`:
 }
 ```
 
-#### Using Home Manager (Best for macOS)
+#### Using Home Manager
 
-For automatic permission preservation on macOS:
+With Home Manager, add to your configuration:
 
 ```nix
 {
@@ -161,33 +163,6 @@ For automatic permission preservation on macOS:
       ];
     };
   };
-}
-```
-
-To enable automatic permission preservation, create `~/.config/nixpkgs/home-manager/modules/claude-code.nix`:
-
-```nix
-{ config, pkgs, lib, ... }:
-
-{
-  # Create stable binary path
-  home.activation.claudeStableLink = lib.hm.dag.entryAfter ["writeBoundary"] ''
-    mkdir -p $HOME/.local/bin
-    rm -f $HOME/.local/bin/claude
-    ln -s ${pkgs.claude-code}/bin/claude $HOME/.local/bin/claude
-  '';
-
-  # Add to PATH
-  home.sessionPath = [ "$HOME/.local/bin" ];
-  
-  # Preserve config during switches
-  home.activation.preserveClaudeConfig = lib.hm.dag.entryBefore ["writeBoundary"] ''
-    [ -f "$HOME/.claude.json" ] && cp -p "$HOME/.claude.json" "$HOME/.claude.json.backup" || true
-  '';
-  
-  home.activation.restoreClaudeConfig = lib.hm.dag.entryAfter ["writeBoundary"] ''
-    [ -f "$HOME/.claude.json.backup" ] && [ ! -f "$HOME/.claude.json" ] && cp -p "$HOME/.claude.json.backup" "$HOME/.claude.json" || true
-  '';
 }
 ```
 
@@ -300,14 +275,14 @@ When running `claude /status`, you may see a warning: "Claude symlink points to 
 
 **This is a false positive and can be safely ignored.** The warning occurs because Claude Code's validation expects a large binary file (>10MB), but Nix packages Claude as a wrapper script that launches Node.js with the actual CLI code. This is standard practice in Nix packaging and everything works correctly despite the warning.
 
-### Claude asks for permissions after every update
+### Claude asks for permissions after every update (macOS)
 
-This package includes fixes for permission persistence. If you're still experiencing issues:
+On macOS, Claude Code may ask for permissions after each Nix update because the binary path changes. To fix this:
 
-1. Ensure you're using the Home Manager configuration with the claude-code module
-2. Check that `~/.local/bin/claude` symlink exists
-3. Run `claude` from `~/.local/bin/claude` instead of the nix store path
-4. Your `.claude.json` and `.claude/` directory should be preserved across updates
+1. Create a stable symlink: `ln -s $(which claude) ~/.local/bin/claude`
+2. Add `~/.local/bin` to your PATH
+3. Always run `claude` from `~/.local/bin/claude`
+4. Your `.claude.json` and `.claude/` directory will be preserved
 
 ### Manual permission reset
 
