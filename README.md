@@ -10,7 +10,7 @@ Always up-to-date Nix package for [Claude Code](https://claude.ai/code) - AI cod
 
 While both this flake and upstream nixpkgs provide Claude Code as a Nix package, this flake focuses on:
 
-1. **Immediate Updates**: New Claude Code versions available within 24 hours of release
+1. **Immediate Updates**: New Claude Code versions available within 1 hour of release
 2. **Dedicated Maintenance**: Focused repository for quick fixes when Claude Code changes
 3. **Flake-First Design**: Direct flake usage with Cachix binary cache
 4. **Custom Wrapper Control**: Ready to adapt when Claude Code adds new validations or requirements
@@ -39,7 +39,7 @@ While nixpkgs provides Claude Code, the update cycle can be slow:
 
 This repository provides:
 
-- **Daily Automated Updates**: GitHub Actions checks for new versions every 24 hours
+- **Hourly Automated Updates**: GitHub Actions checks for new versions every hour
 - **Instant Availability**: Updates are automatically built and cached to Cachix
 - **Quick Fixes**: When Claude Code breaks or adds new requirements, we can fix immediately
 - **Node.js 22 LTS**: We control the runtime version (upstream locked to Node.js 20)
@@ -49,7 +49,7 @@ This repository provides:
 
 While Claude Code exists in nixpkgs, our approach offers specific advantages:
 
-1. **Always Latest Version**: Daily automated updates vs waiting for nixpkgs PR reviews and merges
+1. **Always Latest Version**: Hourly automated checks vs waiting for nixpkgs PR reviews and merges
 2. **Node.js Version Control**: We use Node.js 22 LTS (upstream is locked to Node.js 20 with no override option)
 3. **Flake with Binary Cache**: Direct flake usage with Cachix means instant installation
 4. **Custom Package Implementation**: Full control over the build process for future enhancements (e.g., Bun runtime)
@@ -59,19 +59,19 @@ While Claude Code exists in nixpkgs, our approach offers specific advantages:
 
 | Feature | npm global | nixpkgs upstream | This Flake |
 |---------|------------|------------------|------------|
-| **Latest Version** | ✅ Always | ❌ Delayed | ✅ Daily updates |
+| **Latest Version** | ✅ Always | ❌ Delayed | ✅ Hourly checks |
 | **Node.js Version** | ⚠️ Per Node install | 🔒 Node.js 20 | ✅ Node.js 22 LTS |
 | **Survives Node Switch** | ❌ Lost on switch | ✅ Always available | ✅ Always available |
 | **Binary Cache** | ❌ None | ✅ NixOS cache | ✅ Cachix |
 | **Declarative Config** | ❌ None | ✅ Yes | ✅ Yes |
 | **Version Pinning** | ⚠️ Manual | ✅ Channel-based | ✅ Flake lock |
-| **Update Frequency** | ✅ Immediate | ⚠️ Weeks | ✅ < 24 hours |
+| **Update Frequency** | ✅ Immediate | ⚠️ Weeks | ✅ < 1 hour |
 | **Reproducible** | ❌ No | ✅ Yes | ✅ Yes |
 | **Sandbox Builds** | ❌ N/A | ✅ Yes | ✅ Yes |
 
 ### Key Features
 
-- **Always Up-to-Date**: Automated daily checks and updates via GitHub Actions
+- **Always Up-to-Date**: Automated hourly checks and updates via GitHub Actions
 - **Pre-built Binaries**: Cachix provides instant installation without compilation
 - **Flake-native**: Modern Nix flake for composable, reproducible deployments
 - **Home Manager Example**: Sample configuration for permission persistence on macOS
@@ -242,7 +242,7 @@ nix develop
 
 ### Automated Updates
 
-This repository uses GitHub Actions to automatically check for new Claude Code versions daily. When a new version is detected:
+This repository uses GitHub Actions to automatically check for new Claude Code versions every hour. When a new version is detected:
 
 1. A pull request is automatically created with the version update
 2. The tarball hash is automatically calculated
@@ -250,8 +250,10 @@ This repository uses GitHub Actions to automatically check for new Claude Code v
 4. The PR auto-merges if all checks pass
 
 The automated update workflow runs:
-- Daily at midnight UTC
+- Every hour (at the top of the hour)
 - On manual trigger via GitHub Actions UI
+
+This means new Claude Code versions are typically available in this flake within 30 minutes of being published to npm!
 
 ### Manual Updates
 
