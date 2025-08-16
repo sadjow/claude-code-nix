@@ -6,27 +6,34 @@ Always up-to-date Nix package for [Claude Code](https://claude.ai/code) - AI cod
 
 ## Why this package?
 
-### The Problem with npm Global Installation
+### Primary Goal: Always Up-to-Date Claude Code for Nix Users
 
-When using `npm install -g @anthropic-ai/claude-code`, you face several challenges:
+Both this flake and upstream nixpkgs solve the npm global installation problems. However, this flake exists to provide:
 
-1. **Node.js Version Conflicts**: Project-specific Node.js versions (via nvm, asdf, devenv) can make globally installed packages unavailable
-2. **Path Issues**: Global npm packages may not be in your PATH when switching Node environments
-3. **Permission Problems**: npm global installs often require sudo and can have permission issues
-4. **Version Management**: No declarative way to pin or manage Claude Code versions across systems
+1. **Immediate Updates**: New Claude Code versions available within 24 hours of release
+2. **Dedicated Maintenance**: Focused repository for quick fixes when Claude Code changes
+3. **Flake-First Design**: Direct flake usage with Cachix binary cache
+4. **Custom Wrapper Control**: Ready to adapt when Claude Code adds new validations or requirements
 
-### Our Solution: Nix Flake with Custom Package
+### The Reality of nixpkgs Updates
 
-This repository provides a **Nix flake** with a **custom package** that solves all these issues:
+While nixpkgs provides Claude Code, the update cycle can be slow:
+- Pull requests can take days to weeks for review and merge
+- Updates depend on maintainer availability
+- You're tied to your nixpkgs channel's update schedule
+- Emergency fixes for breaking changes can be delayed
 
-- **Nix Flake**: Modern, composable, and reproducible package management
-- **Bundled Node.js 22 LTS Runtime**: Claude Code always runs with a stable, tested Node.js version
-- **Complete Isolation**: Works independently of your project's Node.js setup
-- **Declarative Management**: Pin specific versions in your Nix configuration
-- **Sandbox Compatible**: Pre-fetches dependencies for offline/restricted builds
-- **Binary Cache via Cachix**: Pre-built binaries for instant installation (no compilation needed)
+### Our Approach: Dedicated Flake Repository
 
-### Why Not Use Upstream nixpkgs?
+This repository provides:
+
+- **Daily Automated Updates**: GitHub Actions checks for new versions every 24 hours
+- **Instant Availability**: Updates are automatically built and cached to Cachix
+- **Quick Fixes**: When Claude Code breaks or adds new requirements, we can fix immediately
+- **Node.js 22 LTS**: We control the runtime version (upstream locked to Node.js 20)
+- **Future Flexibility**: Prepared to test alternative runtimes like Bun
+
+### Why Not Just Use Upstream nixpkgs?
 
 While Claude Code exists in nixpkgs, our approach offers specific advantages:
 
@@ -38,8 +45,8 @@ While Claude Code exists in nixpkgs, our approach offers specific advantages:
 
 ### Comparison Table
 
-| Feature | npm global | nixpkgs | This Flake |
-|---------|------------|---------|------------|
+| Feature | npm global | nixpkgs upstream | This Flake |
+|---------|------------|------------------|------------|
 | **Latest Version** | ✅ Always | ❌ Delayed | ✅ Daily updates |
 | **Node.js Version** | ❌ System varies | 🔒 Node.js 20 | ✅ Node.js 22 LTS |
 | **Binary Cache** | ❌ None | ✅ NixOS cache | ✅ Cachix |
