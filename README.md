@@ -151,6 +151,9 @@ nix build
 # Run tests
 nix run . -- --version
 
+# Check for version updates
+./scripts/update-version.sh --check
+
 # Enter development shell
 nix develop
 ```
@@ -162,8 +165,9 @@ nix develop
 This repository uses GitHub Actions to automatically check for new Claude Code versions daily. When a new version is detected:
 
 1. A pull request is automatically created with the version update
-2. Tests run on both Ubuntu and macOS to verify the build
-3. The PR includes a checklist for manual verification
+2. The tarball hash is automatically calculated
+3. Tests run on both Ubuntu and macOS to verify the build
+4. The PR auto-merges if all checks pass
 
 The automated update workflow runs:
 - Daily at midnight UTC
@@ -171,12 +175,38 @@ The automated update workflow runs:
 
 ### Manual Updates
 
-To manually update to a newer version of Claude Code:
+#### Using the Update Script (Recommended)
+
+```bash
+# Check for updates
+./scripts/update-version.sh --check
+
+# Update to latest version
+./scripts/update-version.sh
+
+# Update to specific version
+./scripts/update-version.sh --version 1.0.82
+
+# Show help
+./scripts/update-version.sh --help
+```
+
+The script automatically:
+- Updates the version in `package.nix`
+- Fetches and calculates the tarball hash
+- Updates `flake.lock` with latest nixpkgs
+- Verifies the build succeeds
+
+#### Manual Process
+
+If you prefer to update manually:
 
 1. Edit `package.nix` and change the `version` field
-2. Build and test locally: `nix build && ./result/bin/claude --version`
-3. Update `flake.lock`: `nix flake update`
-4. Submit a pull request
+2. Get the new tarball hash: `nix-prefetch-url https://registry.npmjs.org/@anthropic-ai/claude-code/-/claude-code-VERSION.tgz`
+3. Update the `sha256` field in `package.nix` with the new hash
+4. Build and test locally: `nix build && ./result/bin/claude --version`
+5. Update `flake.lock`: `nix flake update`
+6. Submit a pull request
 
 ## Troubleshooting
 
