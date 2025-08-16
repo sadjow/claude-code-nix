@@ -6,23 +6,56 @@ Always up-to-date Nix package for [Claude Code](https://claude.ai/code) - AI cod
 
 ## Why this package?
 
-When using development environment managers like devenv, asdf, or nvm, globally installed npm packages can become unavailable or incompatible. This Nix package bundles Claude Code with its own Node.js runtime, ensuring it's always available regardless of your project's Node.js version.
+### The Problem with npm Global Installation
 
-### Always Up-to-Date
+When using `npm install -g @anthropic-ai/claude-code`, you face several challenges:
 
-While Claude Code may be available in nixpkgs, it's not always using the latest version. This repository:
+1. **Node.js Version Conflicts**: Project-specific Node.js versions (via nvm, asdf, devenv) can make globally installed packages unavailable
+2. **Path Issues**: Global npm packages may not be in your PATH when switching Node environments
+3. **Permission Problems**: npm global installs often require sudo and can have permission issues
+4. **Version Management**: No declarative way to pin or manage Claude Code versions across systems
 
-- **Automatically checks for new Claude Code versions daily** via GitHub Actions
-- **Creates pull requests immediately** when updates are available
-- **Ensures you always have access to the latest features** without waiting for nixpkgs updates
-- **Provides pre-built binaries via Cachix** for instant installation
+### Our Solution: Nix Flake with Custom Package
+
+This repository provides a **Nix flake** with a **custom package** that solves all these issues:
+
+- **Nix Flake**: Modern, composable, and reproducible package management
+- **Bundled Node.js 22 LTS Runtime**: Claude Code always runs with a stable, tested Node.js version
+- **Complete Isolation**: Works independently of your project's Node.js setup
+- **Declarative Management**: Pin specific versions in your Nix configuration
+- **Sandbox Compatible**: Pre-fetches dependencies for offline/restricted builds
+- **Binary Cache via Cachix**: Pre-built binaries for instant installation (no compilation needed)
+
+### Why Not Use Upstream nixpkgs?
+
+While Claude Code exists in nixpkgs, our approach offers specific advantages:
+
+1. **Always Latest Version**: Daily automated updates vs waiting for nixpkgs PR reviews and merges
+2. **Node.js Version Control**: We explicitly use Node.js 22 LTS for stability (nixpkgs uses whatever Node.js version is in the channel)
+3. **Flake with Binary Cache**: Direct flake usage with Cachix means instant installation
+4. **Custom Package Implementation**: Full control over the build process for future enhancements (e.g., Bun runtime)
+5. **Dedicated Repository**: Focused maintenance without the complexity of nixpkgs contribution process
+
+### Comparison Table
+
+| Feature | npm global | nixpkgs | This Flake |
+|---------|------------|---------|------------|
+| **Latest Version** | ✅ Always | ❌ Delayed | ✅ Daily updates |
+| **Node.js Isolation** | ❌ Uses system | ✅ Bundled | ✅ Node.js 22 LTS |
+| **Binary Cache** | ❌ None | ✅ NixOS cache | ✅ Cachix |
+| **Declarative Config** | ❌ None | ✅ Yes | ✅ Yes |
+| **Version Pinning** | ❌ Manual | ✅ Channel-based | ✅ Flake lock |
+| **Update Frequency** | ✅ Immediate | ⚠️ Weeks | ✅ < 24 hours |
+| **Sandbox Builds** | ❌ N/A | ✅ Yes | ✅ Yes |
+| **Custom Runtime** | ❌ No | ❌ No | 🔜 Planned |
 
 ### Key Features
 
-- **Bundled Node.js Runtime**: Always works regardless of project-specific Node.js versions
-- **Permission Persistence**: Maintains Claude settings and directory permissions across nix updates
-- **Stable Binary Path**: Uses `~/.local/bin/claude` symlink to prevent macOS permission resets
-- **Home Manager Integration**: Automatically preserves `.claude.json` and `.claude/` directory during switches
+- **Always Up-to-Date**: Automated daily checks and updates via GitHub Actions
+- **Pre-built Binaries**: Cachix provides instant installation without compilation
+- **Flake-native**: Modern Nix flake for composable, reproducible deployments
+- **Home Manager Example**: Sample configuration for permission persistence on macOS
+- **Custom Build Process**: Optimized for Claude Code's specific requirements
 
 ## Quick Start
 
@@ -137,6 +170,32 @@ To enable automatic permission preservation, create `~/.config/nixpkgs/home-mana
   '';
 }
 ```
+
+## Technical Details
+
+### Package Architecture
+
+Our custom `package.nix` implementation:
+
+1. **Pre-fetches npm tarball**: Uses Nix's Fixed Output Derivation (FOD) for reproducible, offline builds
+2. **Bundles Node.js 22 LTS**: Ensures consistent runtime environment across all systems
+3. **Custom wrapper script**: Handles PATH, environment variables, and Claude-specific requirements
+4. **Sandbox compatible**: All network fetching happens during the FOD phase, not build phase
+
+### Runtime Selection
+
+Currently using **Node.js 22 LTS** for:
+- Long-term stability and support
+- Proven compatibility with Claude Code
+- Consistent behavior across platforms
+
+### Future Enhancements
+
+We're exploring support for alternative JavaScript runtimes:
+
+- **Bun**: Potential performance improvements and faster startup times
+- **Deno**: Enhanced security model and TypeScript support
+- **Runtime selection**: Allow users to choose their preferred runtime via overlay options
 
 ## Development
 
