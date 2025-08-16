@@ -31,7 +31,7 @@ This repository provides a **Nix flake** with a **custom package** that solves a
 While Claude Code exists in nixpkgs, our approach offers specific advantages:
 
 1. **Always Latest Version**: Daily automated updates vs waiting for nixpkgs PR reviews and merges
-2. **Node.js Version Control**: We explicitly use Node.js 22 LTS for stability (nixpkgs uses whatever Node.js version is in the channel)
+2. **Node.js Version Control**: We use Node.js 22 LTS (upstream is locked to Node.js 20 with no override option)
 3. **Flake with Binary Cache**: Direct flake usage with Cachix means instant installation
 4. **Custom Package Implementation**: Full control over the build process for future enhancements (e.g., Bun runtime)
 5. **Dedicated Repository**: Focused maintenance without the complexity of nixpkgs contribution process
@@ -41,7 +41,7 @@ While Claude Code exists in nixpkgs, our approach offers specific advantages:
 | Feature | npm global | nixpkgs | This Flake |
 |---------|------------|---------|------------|
 | **Latest Version** | ✅ Always | ❌ Delayed | ✅ Daily updates |
-| **Node.js Isolation** | ❌ Uses system | ✅ Bundled | ✅ Node.js 22 LTS |
+| **Node.js Version** | ❌ System varies | 🔒 Node.js 20 | ✅ Node.js 22 LTS |
 | **Binary Cache** | ❌ None | ✅ NixOS cache | ✅ Cachix |
 | **Declarative Config** | ❌ None | ✅ Yes | ✅ Yes |
 | **Version Pinning** | ❌ Manual | ✅ Channel-based | ✅ Flake lock |
@@ -184,10 +184,11 @@ Our custom `package.nix` implementation:
 
 ### Runtime Selection
 
-Currently using **Node.js 22 LTS** for:
-- Long-term stability and support
-- Proven compatibility with Claude Code
-- Consistent behavior across platforms
+Currently using **Node.js 22 LTS** because:
+- Long-term stability and support until April 2027
+- Better performance than Node.js 20 (upstream nixpkgs version)
+- Latest LTS with all security updates
+- Full control over version (upstream is hardcoded to Node.js 20)
 
 ### Future Enhancements
 
