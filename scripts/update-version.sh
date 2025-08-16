@@ -32,8 +32,8 @@ fetch_tarball_hash() {
     local version="$1"
     local tarball_url="$NPM_REGISTRY_URL/$PACKAGE_NAME/-/claude-code-$version.tgz"
     
-    log_info "Fetching hash for version $version..."
-    nix-prefetch-url "$tarball_url" 2>/dev/null | tail -1
+    local hash=$(nix-prefetch-url "$tarball_url" 2>/dev/null | tail -1)
+    echo "$hash" | tr -d '\n'
 }
 
 update_package_version() {
@@ -59,6 +59,7 @@ update_to_version() {
     update_package_version "$new_version"
     
     # Fetch and update tarball hash
+    log_info "Fetching tarball hash..."
     local tarball_hash=$(fetch_tarball_hash "$new_version")
     if [ -z "$tarball_hash" ]; then
         log_error "Failed to fetch tarball hash"
