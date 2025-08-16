@@ -18,11 +18,14 @@ While both this flake and upstream nixpkgs provide Claude Code as a Nix package,
 
 ### Why Not Just Use npm Global?
 
-While `npm install -g @anthropic-ai/claude-code` works, it has limitations for Nix users:
+While `npm install -g @anthropic-ai/claude-code` works, it has critical limitations:
+- **Disappears on Node.js Switch**: When projects use different Node.js versions (via asdf/nvm), Claude Code becomes unavailable
+- **Must Reinstall Per Version**: Need to install Claude Code separately for each Node.js version
 - **Not Declarative**: Can't be managed in your Nix configuration
 - **Not Reproducible**: Different Node.js versions can cause inconsistencies
-- **Path Conflicts**: Can break when switching Node versions with nvm/asdf
 - **Outside Nix**: Doesn't integrate with Nix's dependency management
+
+**Example Problem**: You're working on a legacy project that uses Node.js 16 via asdf. When you switch to that project, your globally installed Claude Code (from Node.js 22) disappears from your PATH. Both this flake and upstream nixpkgs solve this by bundling Node.js with Claude Code.
 
 ### The Reality of nixpkgs Updates
 
@@ -57,14 +60,14 @@ While Claude Code exists in nixpkgs, our approach offers specific advantages:
 | Feature | npm global | nixpkgs upstream | This Flake |
 |---------|------------|------------------|------------|
 | **Latest Version** | ✅ Always | ❌ Delayed | ✅ Daily updates |
-| **Node.js Version** | ⚠️ User manages | 🔒 Node.js 20 | ✅ Node.js 22 LTS |
+| **Node.js Version** | ⚠️ Per Node install | 🔒 Node.js 20 | ✅ Node.js 22 LTS |
+| **Survives Node Switch** | ❌ Lost on switch | ✅ Always available | ✅ Always available |
 | **Binary Cache** | ❌ None | ✅ NixOS cache | ✅ Cachix |
 | **Declarative Config** | ❌ None | ✅ Yes | ✅ Yes |
 | **Version Pinning** | ⚠️ Manual | ✅ Channel-based | ✅ Flake lock |
 | **Update Frequency** | ✅ Immediate | ⚠️ Weeks | ✅ < 24 hours |
 | **Reproducible** | ❌ No | ✅ Yes | ✅ Yes |
 | **Sandbox Builds** | ❌ N/A | ✅ Yes | ✅ Yes |
-| **Path Conflicts** | ⚠️ With nvm/asdf | ✅ Isolated | ✅ Isolated |
 
 ### Key Features
 
