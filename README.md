@@ -6,23 +6,76 @@ Always up-to-date Nix package for [Claude Code](https://claude.ai/code) - AI cod
 
 ## Why this package?
 
-When using development environment managers like devenv, asdf, or nvm, globally installed npm packages can become unavailable or incompatible. This Nix package bundles Claude Code with its own Node.js runtime, ensuring it's always available regardless of your project's Node.js version.
+### Primary Goal: Always Up-to-Date Claude Code for Nix Users
 
-### Always Up-to-Date
+While both this flake and upstream nixpkgs provide Claude Code as a Nix package, this flake focuses on:
 
-While Claude Code may be available in nixpkgs, it's not always using the latest version. This repository:
+1. **Immediate Updates**: New Claude Code versions available within 24 hours of release
+2. **Dedicated Maintenance**: Focused repository for quick fixes when Claude Code changes
+3. **Flake-First Design**: Direct flake usage with Cachix binary cache
+4. **Custom Wrapper Control**: Ready to adapt when Claude Code adds new validations or requirements
+5. **Node.js 22 LTS**: Latest long-term support version for better performance and security
 
-- **Automatically checks for new Claude Code versions daily** via GitHub Actions
-- **Creates pull requests immediately** when updates are available
-- **Ensures you always have access to the latest features** without waiting for nixpkgs updates
-- **Provides pre-built binaries via Cachix** for instant installation
+### Why Not Just Use npm Global?
+
+While `npm install -g @anthropic-ai/claude-code` works, it has critical limitations:
+- **Disappears on Node.js Switch**: When projects use different Node.js versions (via asdf/nvm), Claude Code becomes unavailable
+- **Must Reinstall Per Version**: Need to install Claude Code separately for each Node.js version
+- **Not Declarative**: Can't be managed in your Nix configuration
+- **Not Reproducible**: Different Node.js versions can cause inconsistencies
+- **Outside Nix**: Doesn't integrate with Nix's dependency management
+
+**Example Problem**: You're working on a legacy project that uses Node.js 16 via asdf. When you switch to that project, your globally installed Claude Code (from Node.js 22) disappears from your PATH. Both this flake and upstream nixpkgs solve this by bundling Node.js with Claude Code.
+
+### The Reality of nixpkgs Updates
+
+While nixpkgs provides Claude Code, the update cycle can be slow:
+- Pull requests can take days to weeks for review and merge
+- Updates depend on maintainer availability
+- You're tied to your nixpkgs channel's update schedule
+- Emergency fixes for breaking changes can be delayed
+
+### Our Approach: Dedicated Flake Repository
+
+This repository provides:
+
+- **Daily Automated Updates**: GitHub Actions checks for new versions every 24 hours
+- **Instant Availability**: Updates are automatically built and cached to Cachix
+- **Quick Fixes**: When Claude Code breaks or adds new requirements, we can fix immediately
+- **Node.js 22 LTS**: We control the runtime version (upstream locked to Node.js 20)
+- **Future Flexibility**: Prepared to test alternative runtimes like Bun
+
+### Why Not Just Use Upstream nixpkgs?
+
+While Claude Code exists in nixpkgs, our approach offers specific advantages:
+
+1. **Always Latest Version**: Daily automated updates vs waiting for nixpkgs PR reviews and merges
+2. **Node.js Version Control**: We use Node.js 22 LTS (upstream is locked to Node.js 20 with no override option)
+3. **Flake with Binary Cache**: Direct flake usage with Cachix means instant installation
+4. **Custom Package Implementation**: Full control over the build process for future enhancements (e.g., Bun runtime)
+5. **Dedicated Repository**: Focused maintenance without the complexity of nixpkgs contribution process
+
+### Comparison Table
+
+| Feature | npm global | nixpkgs upstream | This Flake |
+|---------|------------|------------------|------------|
+| **Latest Version** | ✅ Always | ❌ Delayed | ✅ Daily updates |
+| **Node.js Version** | ⚠️ Per Node install | 🔒 Node.js 20 | ✅ Node.js 22 LTS |
+| **Survives Node Switch** | ❌ Lost on switch | ✅ Always available | ✅ Always available |
+| **Binary Cache** | ❌ None | ✅ NixOS cache | ✅ Cachix |
+| **Declarative Config** | ❌ None | ✅ Yes | ✅ Yes |
+| **Version Pinning** | ⚠️ Manual | ✅ Channel-based | ✅ Flake lock |
+| **Update Frequency** | ✅ Immediate | ⚠️ Weeks | ✅ < 24 hours |
+| **Reproducible** | ❌ No | ✅ Yes | ✅ Yes |
+| **Sandbox Builds** | ❌ N/A | ✅ Yes | ✅ Yes |
 
 ### Key Features
 
-- **Bundled Node.js Runtime**: Always works regardless of project-specific Node.js versions
-- **Permission Persistence**: Maintains Claude settings and directory permissions across nix updates
-- **Stable Binary Path**: Uses `~/.local/bin/claude` symlink to prevent macOS permission resets
-- **Home Manager Integration**: Automatically preserves `.claude.json` and `.claude/` directory during switches
+- **Always Up-to-Date**: Automated daily checks and updates via GitHub Actions
+- **Pre-built Binaries**: Cachix provides instant installation without compilation
+- **Flake-native**: Modern Nix flake for composable, reproducible deployments
+- **Home Manager Example**: Sample configuration for permission persistence on macOS
+- **Custom Build Process**: Optimized for Claude Code's specific requirements
 
 ## Quick Start
 
@@ -137,6 +190,33 @@ To enable automatic permission preservation, create `~/.config/nixpkgs/home-mana
   '';
 }
 ```
+
+## Technical Details
+
+### Package Architecture
+
+Our custom `package.nix` implementation:
+
+1. **Pre-fetches npm tarball**: Uses Nix's Fixed Output Derivation (FOD) for reproducible, offline builds
+2. **Bundles Node.js 22 LTS**: Ensures consistent runtime environment across all systems
+3. **Custom wrapper script**: Handles PATH, environment variables, and Claude-specific requirements
+4. **Sandbox compatible**: All network fetching happens during the FOD phase, not build phase
+
+### Runtime Selection
+
+Currently using **Node.js 22 LTS** because:
+- Long-term stability and support until April 2027
+- Better performance than Node.js 20 (upstream nixpkgs version)
+- Latest LTS with all security updates
+- Full control over version (upstream is hardcoded to Node.js 20)
+
+### Future Enhancements
+
+We're exploring support for alternative JavaScript runtimes:
+
+- **Bun**: Potential performance improvements and faster startup times
+- **Deno**: Enhanced security model and TypeScript support
+- **Runtime selection**: Allow users to choose their preferred runtime via overlay options
 
 ## Development
 
