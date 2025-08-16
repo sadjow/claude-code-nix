@@ -8,12 +8,21 @@ Always up-to-date Nix package for [Claude Code](https://claude.ai/code) - AI cod
 
 ### Primary Goal: Always Up-to-Date Claude Code for Nix Users
 
-Both this flake and upstream nixpkgs solve the npm global installation problems. However, this flake exists to provide:
+While both this flake and upstream nixpkgs provide Claude Code as a Nix package, this flake focuses on:
 
 1. **Immediate Updates**: New Claude Code versions available within 24 hours of release
 2. **Dedicated Maintenance**: Focused repository for quick fixes when Claude Code changes
 3. **Flake-First Design**: Direct flake usage with Cachix binary cache
 4. **Custom Wrapper Control**: Ready to adapt when Claude Code adds new validations or requirements
+5. **Node.js 22 LTS**: Latest long-term support version for better performance and security
+
+### Why Not Just Use npm Global?
+
+While `npm install -g @anthropic-ai/claude-code` works, it has limitations for Nix users:
+- **Not Declarative**: Can't be managed in your Nix configuration
+- **Not Reproducible**: Different Node.js versions can cause inconsistencies
+- **Path Conflicts**: Can break when switching Node versions with nvm/asdf
+- **Outside Nix**: Doesn't integrate with Nix's dependency management
 
 ### The Reality of nixpkgs Updates
 
@@ -48,13 +57,14 @@ While Claude Code exists in nixpkgs, our approach offers specific advantages:
 | Feature | npm global | nixpkgs upstream | This Flake |
 |---------|------------|------------------|------------|
 | **Latest Version** | ✅ Always | ❌ Delayed | ✅ Daily updates |
-| **Node.js Version** | ❌ System varies | 🔒 Node.js 20 | ✅ Node.js 22 LTS |
+| **Node.js Version** | ⚠️ User manages | 🔒 Node.js 20 | ✅ Node.js 22 LTS |
 | **Binary Cache** | ❌ None | ✅ NixOS cache | ✅ Cachix |
 | **Declarative Config** | ❌ None | ✅ Yes | ✅ Yes |
-| **Version Pinning** | ❌ Manual | ✅ Channel-based | ✅ Flake lock |
+| **Version Pinning** | ⚠️ Manual | ✅ Channel-based | ✅ Flake lock |
 | **Update Frequency** | ✅ Immediate | ⚠️ Weeks | ✅ < 24 hours |
+| **Reproducible** | ❌ No | ✅ Yes | ✅ Yes |
 | **Sandbox Builds** | ❌ N/A | ✅ Yes | ✅ Yes |
-| **Custom Runtime** | ❌ No | ❌ No | 🔜 Planned |
+| **Path Conflicts** | ⚠️ With nvm/asdf | ✅ Isolated | ✅ Isolated |
 
 ### Key Features
 
