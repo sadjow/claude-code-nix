@@ -10,16 +10,29 @@
 
 { lib
 , stdenv
+, fetchurl
 , nodejs_22
 , cacert
 , bash
 }:
 
+let
+  version = "1.0.81";  # Update this to install a newer version
+  
+  # Pre-fetch the npm package as a Fixed Output Derivation
+  # This allows network access during fetch phase for sandbox compatibility
+  claudeCodeTarball = fetchurl {
+    url = "https://registry.npmjs.org/@anthropic-ai/claude-code/-/claude-code-${version}.tgz";
+    # To get new hash when updating version:
+    # nix-prefetch-url https://registry.npmjs.org/@anthropic-ai/claude-code/-/claude-code-VERSION.tgz
+    sha256 = "1zmd3s0g03j6da4y058v8y1h816ayyrbh0y2npc6ac9ddds2clwy";
+  };
+in
 stdenv.mkDerivation rec {
   pname = "claude-code";
-  version = "1.0.81";  # Update this to install a newer version
+  inherit version;
 
-  # Don't try to unpack a source tarball - we'll download via npm
+  # Don't try to unpack a source tarball - we'll handle it in buildPhase
   dontUnpack = true;
 
   # Build dependencies
@@ -34,22 +47,18 @@ stdenv.mkDerivation rec {
     mkdir -p $HOME/.npm
     
     # Configure npm to use Nix's SSL certificates
-    # This is necessary because npm needs to verify SSL certificates
-    # when downloading packages from the registry
     export SSL_CERT_FILE=${cacert}/etc/ssl/certs/ca-bundle.crt
     export NODE_EXTRA_CA_CERTS=$SSL_CERT_FILE
     
     # Tell npm where to find certificates
     ${nodejs_22}/bin/npm config set cafile $SSL_CERT_FILE
     
-    # Configure npm to handle network issues better
-    ${nodejs_22}/bin/npm config set fetch-retries 5
-    ${nodejs_22}/bin/npm config set fetch-retry-mintimeout 20000
-    ${nodejs_22}/bin/npm config set fetch-retry-maxtimeout 120000
+    # Configure npm to work offline
+    ${nodejs_22}/bin/npm config set offline true
     
-    # Install claude-code from npm registry
-    # --prefix=$out installs it to our output directory
-    ${nodejs_22}/bin/npm install -g --prefix=$out @anthropic-ai/claude-code@${version}
+    # Install claude-code from the pre-fetched tarball
+    # This avoids network access during build phase
+    ${nodejs_22}/bin/npm install -g --prefix=$out ${claudeCodeTarball}
   '';
 
   installPhase = ''
