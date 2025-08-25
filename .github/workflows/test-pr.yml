@@ -24,7 +24,6 @@ jobs:
           extra_nix_config: |
             experimental-features = nix-command flakes
             access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
-            sandbox = false
         env:
           NIX_FIRST_BUILD_UID: 400
 
