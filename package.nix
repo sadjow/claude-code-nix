@@ -17,7 +17,7 @@
 }:
 
 let
-  version = "2.0.69";  # Update this to install a newer version
+  version = "2.0.70";  # Update this to install a newer version
   
   # Pre-fetch the npm package as a Fixed Output Derivation
   # This allows network access during fetch phase for sandbox compatibility
@@ -25,7 +25,7 @@ let
     url = "https://registry.npmjs.org/@anthropic-ai/claude-code/-/claude-code-${version}.tgz";
     # To get new hash when updating version:
     # nix-prefetch-url https://registry.npmjs.org/@anthropic-ai/claude-code/-/claude-code-VERSION.tgz
-    sha256 = "0crgkc9bbg369wp847s1vgwzmyl3l3wzxsb9jazrp08w9799r4kc";
+    sha256 = "0lgir5afswfrvxz7qb151f3fx2facnwiydsha248xsjv56v75pbh";
   };
 in
 stdenv.mkDerivation rec {
