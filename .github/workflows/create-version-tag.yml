@@ -34,22 +34,54 @@ jobs:
             echo "exists=false" >> $GITHUB_OUTPUT
           fi
 
-      - name: Create and push tag
-        if: steps.check-tag.outputs.exists == 'false'
+      - name: Configure git
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Create and push version tag
+        if: steps.check-tag.outputs.exists == 'false'
+        run: |
           git tag -a "v${{ steps.version.outputs.version }}" -m "Release v${{ steps.version.outputs.version }}"
           git push origin "v${{ steps.version.outputs.version }}"
+
+      - name: Extract major version
+        id: major
+        run: |
+          MAJOR=$(echo "${{ steps.version.outputs.version }}" | cut -d. -f1)
+          echo "major=$MAJOR" >> $GITHUB_OUTPUT
+
+      - name: Update moving tags
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          MAJOR="${{ steps.major.outputs.major }}"
+
+          # Delete remote tags if they exist (moving tags need force update)
+          git push origin :refs/tags/latest 2>/dev/null || true
+          git push origin :refs/tags/v$MAJOR 2>/dev/null || true
+
+          # Delete local tags if they exist
+          git tag -d latest 2>/dev/null || true
+          git tag -d v$MAJOR 2>/dev/null || true
+
+          # Create new annotated tags
+          git tag -a "latest" -m "Latest release: v$VERSION"
+          git tag -a "v$MAJOR" -m "Latest v$MAJOR release: v$VERSION"
+
+          # Push the moving tags
+          git push origin latest
+          git push origin "v$MAJOR"
 
       - name: Summary
         run: |
           echo "## Tag Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "- **Version:** ${{ steps.version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Tag:** ${{ steps.version.outputs.tag }}" >> $GITHUB_STEP_SUMMARY
-          if [ "${{ steps.check-tag.outputs.exists }}" == "true" ]; then
-            echo "- Tag already exists, skipped" >> $GITHUB_STEP_SUMMARY
+          echo "| Tag | Points To |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----|-----------|" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ steps.check-tag.outputs.exists }}" == "false" ]; then
+            echo "| v${{ steps.version.outputs.version }} | $(git rev-parse --short HEAD) |" >> $GITHUB_STEP_SUMMARY
           else
-            echo "- Tag created successfully" >> $GITHUB_STEP_SUMMARY
+            echo "| v${{ steps.version.outputs.version }} | (already exists) |" >> $GITHUB_STEP_SUMMARY
           fi
+          echo "| v${{ steps.major.outputs.major }} | v${{ steps.version.outputs.version }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| latest | v${{ steps.version.outputs.version }} |" >> $GITHUB_STEP_SUMMARY
