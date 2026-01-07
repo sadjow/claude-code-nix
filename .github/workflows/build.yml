@@ -19,9 +19,10 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest]
+        variant: [claude-code, claude-code-bun]
     steps:
     - uses: actions/checkout@v4
-    
+
     - uses: cachix/install-nix-action@v31
       with:
         nix_path: nixpkgs=channel:nixos-unstable
@@ -30,22 +31,26 @@ jobs:
           access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
       env:
         NIX_FIRST_BUILD_UID: 400
-    
+
     - uses: cachix/cachix-action@v15
       if: github.ref == 'refs/heads/main'
       with:
         name: claude-code
         authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
-    
-    - name: Build claude-code
+
+    - name: Build ${{ matrix.variant }}
       run: |
-        nix build .#claude-code
-    
+        nix build .#${{ matrix.variant }}
+
     - name: Push to Cachix
       if: github.ref == 'refs/heads/main'
       run: |
-        nix build .#claude-code --json | jq -r '.[].outputs.out' | cachix push claude-code
-    
-    - name: Test claude-code
+        nix build .#${{ matrix.variant }} --json | jq -r '.[].outputs.out' | cachix push claude-code
+
+    - name: Test ${{ matrix.variant }}
       run: |
-        ./result/bin/claude --version
+        if [ "${{ matrix.variant }}" = "claude-code-bun" ]; then
+          ./result/bin/claude-bun --version
+        else
+          ./result/bin/claude --version
+        fi
