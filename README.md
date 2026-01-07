@@ -340,6 +340,34 @@ If you need to reset Claude's permissions:
 rm -rf ~/.claude ~/.claude.json
 ```
 
+## Alternatives
+
+### Official Native Install
+
+In late 2025, Anthropic introduced an official native install:
+
+```bash
+curl -fsSL https://claude.ai/install.sh | sh
+```
+
+This downloads a self-contained binary bundled with Bun runtime.
+
+#### Trade-offs
+
+| Aspect | Official Native Install | This Nix Flake |
+|--------|------------------------|----------------|
+| **Simplicity** | ✅ One command | Requires Nix |
+| **Latest Version** | ⚠️ Can lag behind npm | ✅ Hourly updates |
+| **Runtime** | Bun | Node.js 22 LTS |
+| **Version Pinning** | ❌ No | ✅ Git tags |
+| **Rollback** | ❌ Manual | ✅ `nix profile rollback` |
+| **Declarative** | ❌ No | ✅ NixOS/Home Manager |
+| **Windows** | ✅ Yes | ❌ No |
+
+**Choose official native install if**: You want the simplest setup, don't use Nix, or need Windows support.
+
+**Choose this flake if**: You use NixOS/Home Manager, need version pinning, want the latest version, or prefer declarative configuration.
+
 ## License
 
 The Nix packaging is MIT licensed. Claude Code itself is proprietary software by Anthropic.
