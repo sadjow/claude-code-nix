@@ -64,7 +64,7 @@ While Claude Code exists in nixpkgs, our approach offers specific advantages:
 | **Survives Node Switch** | ❌ Lost on switch | ✅ Always available | ✅ Always available |
 | **Binary Cache** | ❌ None | ✅ NixOS cache | ✅ Cachix |
 | **Declarative Config** | ❌ None | ✅ Yes | ✅ Yes |
-| **Version Pinning** | ⚠️ Manual | ✅ Channel-based | ✅ Flake lock |
+| **Version Pinning** | ⚠️ Manual | ✅ Channel-based | ✅ Git tags (v2.0.76, v2, latest) |
 | **Update Frequency** | ✅ Immediate | ⚠️ Weeks | ✅ < 1 hour |
 | **Reproducible** | ❌ No | ✅ Yes | ✅ Yes |
 | **Sandbox Builds** | ❌ N/A | ✅ Yes | ✅ Yes |
@@ -166,6 +166,53 @@ With Home Manager, add to your configuration:
 }
 ```
 
+## Version Pinning
+
+Pin to specific Claude Code versions using git refs:
+
+### Available Tags
+
+| Tag | Example | Behavior |
+|-----|---------|----------|
+| `vX.Y.Z` | `v2.0.76` | Exact version (immutable) |
+| `vX` | `v2` | Latest in major series (updates automatically) |
+| `latest` | `latest` | Always newest version (updates automatically) |
+
+### Usage Examples
+
+```bash
+# Always latest (default)
+nix run github:sadjow/claude-code-nix
+
+# Pin to exact version
+nix run github:sadjow/claude-code-nix?ref=v2.0.76
+
+# Track latest v2.x (auto-updates)
+nix run github:sadjow/claude-code-nix?ref=v2
+
+# Track latest v1.x (stays at v1.0.128)
+nix run github:sadjow/claude-code-nix?ref=v1
+```
+
+### In Flake Inputs
+
+```nix
+{
+  inputs = {
+    # Always latest
+    claude-code.url = "github:sadjow/claude-code-nix";
+
+    # Pin to exact version
+    claude-code.url = "github:sadjow/claude-code-nix?ref=v2.0.76";
+
+    # Track major version
+    claude-code.url = "github:sadjow/claude-code-nix?ref=v2";
+  };
+}
+```
+
+All versions from v1.0.35 onwards are tagged.
+
 ## Technical Details
 
 ### Package Architecture
@@ -223,6 +270,7 @@ This repository uses GitHub Actions to automatically check for new Claude Code v
 2. The tarball hash is automatically calculated
 3. Tests run on both Ubuntu and macOS to verify the build
 4. The PR auto-merges if all checks pass
+5. Version tags are automatically created (`vX.Y.Z`, `vX`, `latest`)
 
 The automated update workflow runs:
 - Every hour (at the top of the hour)
