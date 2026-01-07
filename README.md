@@ -93,6 +93,73 @@ nix run github:sadjow/claude-code-nix
 nix profile install github:sadjow/claude-code-nix
 ```
 
+## Standalone Installation (Without Home Manager)
+
+If you're not using Home Manager or NixOS, here's the complete workflow for managing Claude Code with `nix profile`.
+
+### Install
+
+```bash
+# Node.js runtime (default)
+nix profile install github:sadjow/claude-code-nix
+
+# Bun runtime
+nix profile install github:sadjow/claude-code-nix#claude-code-bun
+
+# Both runtimes (different binary names)
+nix profile install github:sadjow/claude-code-nix#claude-code
+nix profile install github:sadjow/claude-code-nix#claude-code-bun
+```
+
+### Verify Installation
+
+```bash
+# Node.js version
+which claude
+claude --version
+
+# Bun version
+which claude-bun
+claude-bun --version
+```
+
+### Update to Latest Version
+
+```bash
+# Update all flake-based packages
+nix profile upgrade --all
+
+# Or update only claude-code
+nix profile upgrade '.*claude-code.*'
+```
+
+### Rollback
+
+```bash
+# Revert to previous profile state
+nix profile rollback
+```
+
+### Uninstall
+
+```bash
+nix profile remove '.*claude-code.*'
+```
+
+### Troubleshooting PATH
+
+If `claude` command is not found after installation, ensure `~/.nix-profile/bin` is in your PATH:
+
+```bash
+# Check if nix-profile/bin is in PATH
+echo $PATH | tr ':' '\n' | grep nix-profile
+
+# If not found, add to your shell config (~/.bashrc, ~/.zshrc, etc.)
+export PATH="$HOME/.nix-profile/bin:$PATH"
+```
+
+For multi-user Nix installations, the PATH is typically configured by `/etc/profile.d/nix.sh` or similar. Ensure your shell sources this file.
+
 ## Runtime Selection
 
 This flake supports two JavaScript runtimes. Node.js 22 LTS is the default.
