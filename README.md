@@ -97,10 +97,10 @@ nix profile install github:sadjow/claude-code-nix
 
 This flake supports two JavaScript runtimes. Node.js 22 LTS is the default.
 
-| Runtime | Package | Command |
-|---------|---------|---------|
-| Node.js 22 LTS (default) | `claude-code` | `nix run .#claude-code` |
-| Bun 1.3.5 | `claude-code-bun` | `nix run .#claude-code-bun` |
+| Runtime | Package | Binary | Command |
+|---------|---------|--------|---------|
+| Node.js 22 LTS (default) | `claude-code` | `claude` | `nix run .#claude-code` |
+| Bun 1.3.5 | `claude-code-bun` | `claude-bun` | `nix run .#claude-code-bun` |
 
 ### Quick Usage
 
@@ -113,6 +113,19 @@ nix run github:sadjow/claude-code-nix#claude-code-bun
 
 # Install Bun variant
 nix profile install github:sadjow/claude-code-nix#claude-code-bun
+```
+
+### Install Both Runtimes
+
+You can install both variants simultaneously for comparison:
+
+```bash
+nix profile install github:sadjow/claude-code-nix#claude-code
+nix profile install github:sadjow/claude-code-nix#claude-code-bun
+
+# Use either
+claude --version        # Node.js
+claude-bun --version    # Bun
 ```
 
 ### Using Overlay with Runtime Selection

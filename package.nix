@@ -39,6 +39,7 @@ let
       runCmd = "${nodejs_22}/bin/node --no-warnings --enable-source-maps";
       nativeBuildInputs = [ nodejs_22 cacert ];
       description = "Claude Code (Node.js) - AI coding assistant in your terminal";
+      binName = "claude";
     };
     bun = {
       pkg = bun;
@@ -47,6 +48,7 @@ let
       runCmd = "${bun}/bin/bun run";
       nativeBuildInputs = [ bun cacert ];
       description = "Claude Code (Bun) - AI coding assistant in your terminal";
+      binName = "claude-bun";
     };
   };
 
@@ -100,14 +102,14 @@ stdenv.mkDerivation rec {
     # 3. Passes all arguments through
     # 4. Preserves the consistent path for settings
     mkdir -p $out/bin
-    cat > $out/bin/claude << 'EOF'
+    cat > $out/bin/${selected.binName} << 'EOF'
 #!${bash}/bin/bash
 # Set NODE_PATH to find the claude-code modules
 export NODE_PATH="$out/lib/node_modules"
 
 # Set a consistent executable path for claude to prevent permission resets
 # This makes macOS and claude think it's always the same binary
-export CLAUDE_EXECUTABLE_PATH="$HOME/.local/bin/claude"
+export CLAUDE_EXECUTABLE_PATH="$HOME/.local/bin/${selected.binName}"
 
 # Disable automatic update checks since updates should go through Nix
 export DISABLE_AUTOUPDATER=1
@@ -133,10 +135,10 @@ export PATH="$(dirname "$_CLAUDE_NPM_WRAPPER"):$PATH"
 # Run claude from current directory
 exec ${selected.runCmd} "$out/lib/node_modules/@anthropic-ai/claude-code/cli.js" "$@"
 EOF
-    chmod +x $out/bin/claude
+    chmod +x $out/bin/${selected.binName}
 
     # Replace $out placeholder with the actual output path
-    substituteInPlace $out/bin/claude \
+    substituteInPlace $out/bin/${selected.binName} \
       --replace '$out' "$out"
   '';
 

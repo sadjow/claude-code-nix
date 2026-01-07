@@ -39,7 +39,7 @@
           };
           claude-code-bun = {
             type = "app";
-            program = "${pkgs.claude-code-bun}/bin/claude";
+            program = "${pkgs.claude-code-bun}/bin/claude-bun";
           };
         };
 
