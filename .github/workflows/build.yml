@@ -49,4 +49,8 @@ jobs:
 
     - name: Test ${{ matrix.variant }}
       run: |
-        ./result/bin/claude --version
+        if [ "${{ matrix.variant }}" = "claude-code-bun" ]; then
+          ./result/bin/claude-bun --version
+        else
+          ./result/bin/claude --version
+        fi

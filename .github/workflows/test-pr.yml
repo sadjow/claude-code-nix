@@ -41,14 +41,27 @@ jobs:
 
       - name: Test claude version
         run: |
-          ./result/bin/claude --version
+          if [ "${{ matrix.variant }}" = "claude-code-bun" ]; then
+            ./result/bin/claude-bun --version
+          else
+            ./result/bin/claude --version
+          fi
 
       - name: Verify package contents
         run: |
-          test -f ./result/bin/claude
+          if [ "${{ matrix.variant }}" = "claude-code-bun" ]; then
+            test -f ./result/bin/claude-bun
+          else
+            test -f ./result/bin/claude
+          fi
           test -d ./result/lib/node_modules/@anthropic-ai/claude-code
 
       - name: Run basic functionality test
         run: |
-          ./result/bin/claude --help || true
-          ./result/bin/claude --version 2>&1 | grep -E "claude-code|Claude"
+          if [ "${{ matrix.variant }}" = "claude-code-bun" ]; then
+            ./result/bin/claude-bun --help || true
+            ./result/bin/claude-bun --version 2>&1 | grep -E "claude-code|Claude"
+          else
+            ./result/bin/claude --help || true
+            ./result/bin/claude --version 2>&1 | grep -E "claude-code|Claude"
+          fi
