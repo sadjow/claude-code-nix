@@ -173,7 +173,7 @@ Add to your `flake.nix`:
       modules = [
         {
           nixpkgs.overlays = [ claude-code.overlays.default ];
-          environment.systemPackages = [ pkgs.claude-code ];
+          environment.systemPackages = [ pkgs.claude-code ];  # or pkgs.claude-code-bun
         }
       ];
     };
@@ -198,7 +198,7 @@ With Home Manager, add to your configuration:
       modules = [
         {
           nixpkgs.overlays = [ claude-code.overlays.default ];
-          home.packages = [ pkgs.claude-code ];
+          home.packages = [ pkgs.claude-code ];  # or pkgs.claude-code-bun
         }
       ];
     };
