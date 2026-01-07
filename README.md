@@ -362,9 +362,9 @@ This downloads a self-contained binary bundled with Bun runtime.
 | **Version Pinning** | ❌ No | ✅ Git tags |
 | **Rollback** | ❌ Manual | ✅ `nix profile rollback` |
 | **Declarative** | ❌ No | ✅ NixOS/Home Manager |
-| **Windows** | ✅ Yes | ❌ No |
+| **Windows** | Via WSL | Via WSL |
 
-**Choose official native install if**: You want the simplest setup, don't use Nix, or need Windows support.
+**Choose official native install if**: You want the simplest setup or don't use Nix.
 
 **Choose this flake if**: You use NixOS/Home Manager, need version pinning, want the latest version, or prefer declarative configuration.
 
