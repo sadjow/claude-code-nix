@@ -12,6 +12,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest]
+        variant: [claude-code, claude-code-bun]
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout repository
@@ -34,27 +35,20 @@ jobs:
           authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
           skipPush: true
 
-      - name: Build package
+      - name: Build ${{ matrix.variant }}
         run: |
-          nix build .#claude-code --print-build-logs
-          
+          nix build .#${{ matrix.variant }} --print-build-logs
+
       - name: Test claude version
         run: |
-          # Test that claude runs and reports version
           ./result/bin/claude --version
-          
+
       - name: Verify package contents
         run: |
-          # Verify the binary exists
           test -f ./result/bin/claude
-          
-          # Verify Node modules are installed
           test -d ./result/lib/node_modules/@anthropic-ai/claude-code
-          
+
       - name: Run basic functionality test
         run: |
-          # Test help command
           ./result/bin/claude --help || true
-          
-          # Verify it's using the correct Node.js version
           ./result/bin/claude --version 2>&1 | grep -E "claude-code|Claude"

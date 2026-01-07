@@ -9,7 +9,8 @@
   outputs = { self, nixpkgs, flake-utils }:
     let
       overlay = final: prev: {
-        claude-code = final.callPackage ./package.nix { };
+        claude-code = final.callPackage ./package.nix { runtime = "node"; };
+        claude-code-bun = final.callPackage ./package.nix { runtime = "bun"; };
       };
     in
     flake-utils.lib.eachDefaultSystem (system:
@@ -24,8 +25,9 @@
         packages = {
           default = pkgs.claude-code;
           claude-code = pkgs.claude-code;
+          claude-code-bun = pkgs.claude-code-bun;
         };
-        
+
         apps = {
           default = {
             type = "app";
@@ -34,6 +36,10 @@
           claude-code = {
             type = "app";
             program = "${pkgs.claude-code}/bin/claude";
+          };
+          claude-code-bun = {
+            type = "app";
+            program = "${pkgs.claude-code-bun}/bin/claude";
           };
         };
 

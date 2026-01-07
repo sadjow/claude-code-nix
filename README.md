@@ -43,7 +43,7 @@ This repository provides:
 - **Instant Availability**: Updates are automatically built and cached to Cachix
 - **Quick Fixes**: When Claude Code breaks or adds new requirements, we can fix immediately
 - **Node.js 22 LTS**: We control the runtime version (upstream locked to Node.js 20)
-- **Future Flexibility**: Prepared to test alternative runtimes like Bun
+- **Runtime Choice**: Both Node.js and Bun runtimes available
 
 ### Why Not Just Use Upstream nixpkgs?
 
@@ -52,7 +52,7 @@ While Claude Code exists in nixpkgs, our approach offers specific advantages:
 1. **Always Latest Version**: Hourly automated checks vs waiting for nixpkgs PR reviews and merges
 2. **Node.js Version Control**: We use Node.js 22 LTS (upstream is locked to Node.js 20 with no override option)
 3. **Flake with Binary Cache**: Direct flake usage with Cachix means instant installation
-4. **Custom Package Implementation**: Full control over the build process for future enhancements (e.g., Bun runtime)
+4. **Custom Package Implementation**: Full control over the build process with multiple runtime options (Node.js or Bun)
 5. **Dedicated Repository**: Focused maintenance without the complexity of nixpkgs contribution process
 
 ### Comparison Table
@@ -60,7 +60,7 @@ While Claude Code exists in nixpkgs, our approach offers specific advantages:
 | Feature | npm global | nixpkgs upstream | This Flake |
 |---------|------------|------------------|------------|
 | **Latest Version** | ✅ Always | ❌ Delayed | ✅ Hourly checks |
-| **Node.js Version** | ⚠️ Per Node install | 🔒 Node.js 20 | ✅ Node.js 22 LTS |
+| **Runtime Options** | ⚠️ Per Node install | 🔒 Node.js 20 | ✅ Node.js 22 or Bun |
 | **Survives Node Switch** | ❌ Lost on switch | ✅ Always available | ✅ Always available |
 | **Binary Cache** | ❌ None | ✅ NixOS cache | ✅ Cachix |
 | **Declarative Config** | ❌ None | ✅ Yes | ✅ Yes |
@@ -92,6 +92,46 @@ nix run github:sadjow/claude-code-nix
 # Install to your profile (survives reboots)
 nix profile install github:sadjow/claude-code-nix
 ```
+
+## Runtime Selection
+
+This flake supports two JavaScript runtimes. Node.js 22 LTS is the default.
+
+| Runtime | Package | Command |
+|---------|---------|---------|
+| Node.js 22 LTS (default) | `claude-code` | `nix run .#claude-code` |
+| Bun 1.3.5 | `claude-code-bun` | `nix run .#claude-code-bun` |
+
+### Quick Usage
+
+```bash
+# Default (Node.js 22 LTS)
+nix run github:sadjow/claude-code-nix
+
+# Bun runtime
+nix run github:sadjow/claude-code-nix#claude-code-bun
+
+# Install Bun variant
+nix profile install github:sadjow/claude-code-nix#claude-code-bun
+```
+
+### Using Overlay with Runtime Selection
+
+```nix
+{
+  nixpkgs.overlays = [ claude-code.overlays.default ];
+  # Both packages are now available:
+  # - pkgs.claude-code (Node.js - default)
+  # - pkgs.claude-code-bun (Bun)
+}
+```
+
+### When to Choose Each Runtime
+
+| Choose | If you need |
+|--------|-------------|
+| **Node.js (default)** | LTS stability (supported until April 2027), proven production reliability |
+| **Bun** | Faster startup time, lower memory footprint, newer runtime experience |
 
 ### Optional: Enable Binary Cache for Faster Installation
 
@@ -224,21 +264,24 @@ Our custom `package.nix` implementation:
 3. **Custom wrapper script**: Handles PATH, environment variables, and Claude-specific requirements
 4. **Sandbox compatible**: All network fetching happens during the FOD phase, not build phase
 
-### Runtime Selection
+### Runtime Options
 
-Currently using **Node.js 22 LTS** because:
+This package supports multiple JavaScript runtimes via parameterization:
+
+**Node.js 22 LTS (default)**:
 - Long-term stability and support until April 2027
 - Better performance than Node.js 20 (upstream nixpkgs version)
 - Latest LTS with all security updates
-- Full control over version (upstream is hardcoded to Node.js 20)
+
+**Bun 1.3.5**:
+- Faster startup times
+- Lower memory footprint
+- Modern runtime with excellent Node.js compatibility
 
 ### Future Enhancements
 
-We're exploring support for alternative JavaScript runtimes:
-
-- **Bun**: Potential performance improvements and faster startup times
-- **Deno**: Enhanced security model and TypeScript support
-- **Runtime selection**: Allow users to choose their preferred runtime via overlay options
+- **Deno**: Enhanced security model and TypeScript support (planned)
+- **Additional runtimes**: Community contributions welcome
 
 ## Development
 
@@ -247,14 +290,20 @@ We're exploring support for alternative JavaScript runtimes:
 git clone https://github.com/sadjow/claude-code-nix
 cd claude-code-nix
 
-# Build the package
+# Build the default package (Node.js)
 nix build
+
+# Build the Bun variant
+nix build .#claude-code-bun
 
 # Run tests
 nix run . -- --version
 
 # Check for version updates
 ./scripts/update-version.sh --check
+
+# Run runtime benchmarks
+./scripts/benchmark-runtimes.sh
 
 # Enter development shell
 nix develop
