@@ -90,7 +90,7 @@ jobs:
       - name: Enable Auto-Merge
         if: steps.check.outputs.update_needed == 'true' && steps.create-pr.outputs.pull-request-number
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.PAT_TOKEN }}
         run: |
           gh pr merge ${{ steps.create-pr.outputs.pull-request-number }} --auto --squash --delete-branch
 
