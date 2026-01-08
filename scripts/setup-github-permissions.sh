@@ -38,28 +38,9 @@ To complete the setup, you need to manually configure the following in GitHub:
 3. Check: "Allow auto-merge"
 4. Click "Save"
 
-### Step 3: Create Personal Access Token (PAT) for Auto-Tagging
-The auto-tagging workflow requires a PAT to trigger downstream workflows.
-
-1. Go to: https://github.com/settings/personal-access-tokens
-2. Click "Generate new token"
-3. Name: "claude-code-nix auto-merge"
-4. Expiration: Set as needed (or no expiration)
-5. Repository access: Select "Only select repositories" → sadjow/claude-code-nix
-6. Permissions: Repository permissions → Contents → Read and write
-7. Click "Generate token" and copy the token
-
-### Step 4: Add PAT as Repository Secret
-1. Go to: https://github.com/$REPO/settings/secrets/actions
-2. Click "New repository secret"
-3. Name: PAT_TOKEN
-4. Value: Paste the token from Step 3
-5. Click "Add secret"
-
 This will allow the automated update workflow to:
 - Create pull requests
 - Automatically merge them when CI passes
-- Trigger the auto-tagging workflow after merge
 
 ================================================================
 

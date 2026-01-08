@@ -17,21 +17,6 @@ These settings allow the `update-claude-code.yml` workflow to:
 - Create pull requests for version updates
 - Update the flake.lock file
 
-### Personal Access Token (PAT) for Auto-Tagging
-
-A PAT is required to trigger the auto-tagging workflow after version updates are merged.
-
-1. Go to https://github.com/settings/personal-access-tokens
-2. Generate a new fine-grained token:
-   - Name: "claude-code-nix auto-merge"
-   - Repository access: Only select repositories → sadjow/claude-code-nix
-   - Permissions: Contents → Read and write
-3. Add as repository secret:
-   - Navigate to Settings → Secrets and variables → Actions
-   - Create secret named `PAT_TOKEN` with the token value
-
-This enables the auto-merge to trigger the `create-version-tag.yml` workflow.
-
 ## Verification
 
 After configuring the settings, you can verify the workflow works by:

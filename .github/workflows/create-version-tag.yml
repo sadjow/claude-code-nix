@@ -1,16 +1,17 @@
 name: Create Version Tag
 
 on:
-  push:
+  workflow_run:
+    workflows: ["Build and Cache"]
+    types: [completed]
     branches: [main]
-    paths:
-      - 'package.nix'
 
 permissions:
   contents: write
 
 jobs:
   create-tag:
+    if: github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
