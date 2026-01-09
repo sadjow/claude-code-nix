@@ -21,7 +21,16 @@ jobs:
         if: inputs.tag
         id: resolve-tag
         run: |
-          SHA=$(gh api repos/${{ github.repository }}/git/ref/tags/${{ inputs.tag }} --jq '.object.sha')
+          # Get tag reference
+          REF=$(gh api repos/${{ github.repository }}/git/ref/tags/${{ inputs.tag }})
+          SHA=$(echo "$REF" | jq -r '.object.sha')
+          TYPE=$(echo "$REF" | jq -r '.object.type')
+
+          # Dereference if annotated tag (type=tag) to get actual commit
+          if [ "$TYPE" = "tag" ]; then
+            SHA=$(gh api repos/${{ github.repository }}/git/tags/$SHA --jq '.object.sha')
+          fi
+
           echo "sha=$SHA" >> $GITHUB_OUTPUT
         env:
           GH_TOKEN: ${{ github.token }}
