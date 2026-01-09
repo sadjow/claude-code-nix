@@ -1,7 +1,5 @@
 # claude-code-nix
 
-[![Flakestry](https://flakestry.dev/api/badge/github/sadjow/claude-code-nix)](https://flakestry.dev/flake/github/sadjow/claude-code-nix)
-
 Always up-to-date Nix package for [Claude Code](https://claude.ai/code) - AI coding assistant in your terminal.
 
 **🚀 Automatically updated hourly** to ensure you always have the latest Claude Code version.
@@ -70,14 +68,12 @@ While Claude Code exists in nixpkgs, our approach offers specific advantages:
 | **Update Frequency** | ✅ Immediate | ⚠️ Weeks | ✅ < 1 hour |
 | **Reproducible** | ❌ No | ✅ Yes | ✅ Yes |
 | **Sandbox Builds** | ❌ N/A | ✅ Yes | ✅ Yes |
-| **Flakestry Registry** | ❌ N/A | ❌ No | ✅ Yes |
 
 ### Key Features
 
 - **Always Up-to-Date**: Automated hourly checks and updates via GitHub Actions
 - **Pre-built Binaries**: Cachix provides instant installation without compilation
 - **Flake-native**: Modern Nix flake for composable, reproducible deployments
-- **Flakestry Published**: Discoverable on [flakestry.dev](https://flakestry.dev/flake/github/sadjow/claude-code-nix)
 - **Home Manager Example**: Sample configuration for permission persistence on macOS
 - **Custom Build Process**: Optimized for Claude Code's specific requirements
 
