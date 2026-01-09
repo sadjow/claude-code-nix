@@ -21,3 +21,4 @@ jobs:
       - uses: flakestry/flakestry-publish@main
         with:
           version: "${{ inputs.tag || github.ref_name }}"
+          ref: "${{ inputs.tag || github.sha }}"
