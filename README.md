@@ -213,6 +213,21 @@ claude-bun --version    # Bun
 | **Node.js (default)** | LTS stability (supported until April 2027), proven production reliability |
 | **Bun** | Faster startup time, lower memory footprint, newer runtime experience |
 
+### Custom Binary Names
+
+You can customize the binary names when building:
+
+```nix
+# In your flake.nix or overlay
+pkgs.claude-code.override { nodeBinName = "cc"; }
+pkgs.claude-code-bun.override { bunBinName = "claude"; }
+```
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `nodeBinName` | `claude` | Binary name for Node.js runtime |
+| `bunBinName` | `claude-bun` | Binary name for Bun runtime |
+
 ### Optional: Enable Binary Cache for Faster Installation
 
 To download pre-built binaries instead of compiling:
@@ -487,7 +502,7 @@ This downloads a self-contained binary bundled with Bun runtime.
 |--------|------------------------|----------------|
 | **Simplicity** | ✅ One command | Requires Nix |
 | **Latest Version** | ⚠️ Can lag behind npm | ✅ Hourly updates |
-| **Runtime** | Bun | Node.js 22 LTS |
+| **Runtime** | Bun | Node.js 22 LTS or Bun |
 | **Version Pinning** | ❌ No | ✅ Git tags |
 | **Rollback** | ❌ Manual | ✅ `nix profile rollback` |
 | **Declarative** | ❌ No | ✅ NixOS/Home Manager |
