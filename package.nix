@@ -16,6 +16,7 @@
 , cacert
 , bash
 , runtime ? "node"  # "node" or "bun"
+, bunBinName ? "claude-bun"
 }:
 
 let
@@ -48,7 +49,7 @@ let
       runCmd = "${bun}/bin/bun run";
       nativeBuildInputs = [ bun cacert ];
       description = "Claude Code (Bun) - AI coding assistant in your terminal";
-      binName = "claude-bun";
+      binName = bunBinName;
     };
   };
 
