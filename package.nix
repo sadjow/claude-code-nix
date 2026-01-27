@@ -1,12 +1,11 @@
 # Claude Code Package
 #
-# This package installs Claude Code with its own JavaScript runtime to ensure
-# it's always available regardless of project-specific Node.js versions.
+# This package installs Claude Code with your choice of runtime:
+# - native: Pre-built binary from Anthropic (default, recommended)
+# - node: Run via Node.js from npm package
+# - bun: Run via Bun from npm package
 #
-# Problem: When using devenv, asdf, or other Node.js version managers,
-# Claude Code installed via npm might not be available or compatible.
-#
-# Solution: Install Claude Code through Nix with a bundled runtime (Node.js or Bun).
+# The native runtime is self-contained and doesn't require Node.js or Bun.
 
 { lib
 , stdenv
@@ -15,31 +14,69 @@
 , bun
 , cacert
 , bash
-, runtime ? "node"  # "node" or "bun"
-, nodeBinName ? "claude"
+, patchelf
+, autoPatchelfHook
+, runtime ? "native"  # "native", "node", or "bun"
+, nativeBinName ? "claude"
+, nodeBinName ? "claude-node"
 , bunBinName ? "claude-bun"
 }:
 
 let
-  version = "2.1.20";  # Update this to install a newer version
+  version = "2.1.20";
 
-  # Pre-fetch the npm package as a Fixed Output Derivation
-  # This allows network access during fetch phase for sandbox compatibility
-  claudeCodeTarball = fetchurl {
-    url = "https://registry.npmjs.org/@anthropic-ai/claude-code/-/claude-code-${version}.tgz";
-    # To get new hash when updating version:
-    # nix-prefetch-url https://registry.npmjs.org/@anthropic-ai/claude-code/-/claude-code-VERSION.tgz
-    sha256 = "0jghdvs05rrd90pvc93ak432idp35353996z68zzvj1d4jgp4g6y";
+  # Platform mapping for native binaries (Nix system -> Anthropic platform)
+  platformMap = {
+    "aarch64-darwin" = "darwin-arm64";
+    "x86_64-darwin" = "darwin-x64";
+    "x86_64-linux" = "linux-x64";
+    "aarch64-linux" = "linux-arm64";
   };
+
+  platform = platformMap.${stdenv.hostPlatform.system} or null;
+
+  # Native binary hashes per platform
+  nativeHashes = {
+    "darwin-arm64" = "134c2ws9w3l729490dizzvn5d2hxszjqvwswfzjyhjl5xnb3aw65";
+    "darwin-x64" = "0idhd79v7lj96jz0j33x8fhjh06wsaqaz1067fqxk2y8f0kjjf0d";
+    "linux-x64" = "1k2gaz4smd83azy9zsmw1x0ynb2wz605rsjf5pdqd93qaf7nklzr";
+    "linux-arm64" = "16bgw4xa5y9vdccsdy3cg5gfca3ky5s6dwrmq8hinl58lk3h327b";
+  };
+
+  # Native binary URL
+  nativeBinaryUrl = "https://storage.googleapis.com/claude-code-dist-86c565f3-f756-42ad-8dfa-d59b1c096819/claude-code-releases/${version}/${platform}/claude";
+
+  # Fetch native binary (only when runtime is native and platform is supported)
+  nativeBinary = if runtime == "native" && platform != null then
+    fetchurl {
+      url = nativeBinaryUrl;
+      sha256 = nativeHashes.${platform};
+    }
+  else null;
+
+  # Pre-fetch the npm package for node/bun runtimes
+  claudeCodeTarball = if runtime != "native" then
+    fetchurl {
+      url = "https://registry.npmjs.org/@anthropic-ai/claude-code/-/claude-code-${version}.tgz";
+      sha256 = "0jghdvs05rrd90pvc93ak432idp35353996z68zzvj1d4jgp4g6y";
+    }
+  else null;
 
   # Runtime-specific configuration
   runtimeConfig = {
+    native = {
+      nativeBuildInputs = lib.optionals stdenv.isLinux [ patchelf autoPatchelfHook ];
+      buildInputs = lib.optionals stdenv.isLinux [ stdenv.cc.cc.lib ];
+      description = "Claude Code (Native Binary) - AI coding assistant in your terminal";
+      binName = nativeBinName;
+    };
     node = {
       pkg = nodejs_22;
       runtimeBin = "${nodejs_22}/bin/node";
       npmBin = "${nodejs_22}/bin/npm";
       runCmd = "${nodejs_22}/bin/node --no-warnings --enable-source-maps";
       nativeBuildInputs = [ nodejs_22 cacert ];
+      buildInputs = [];
       description = "Claude Code (Node.js) - AI coding assistant in your terminal";
       binName = nodeBinName;
     };
@@ -49,6 +86,7 @@ let
       npmBin = "${bun}/bin/bun";
       runCmd = "${bun}/bin/bun run";
       nativeBuildInputs = [ bun cacert ];
+      buildInputs = [];
       description = "Claude Code (Bun) - AI coding assistant in your terminal";
       binName = bunBinName;
     };
@@ -56,100 +94,112 @@ let
 
   selected = runtimeConfig.${runtime};
 in
+assert runtime == "native" -> platform != null ||
+  throw "Native runtime not supported on ${stdenv.hostPlatform.system}. Supported: aarch64-darwin, x86_64-darwin, x86_64-linux, aarch64-linux";
+
 stdenv.mkDerivation rec {
-  pname = if runtime == "node" then "claude-code" else "claude-code-${runtime}";
+  pname = if runtime == "native" then "claude-code"
+          else if runtime == "node" then "claude-code-node"
+          else "claude-code-${runtime}";
   inherit version;
 
-  # Don't try to unpack a source tarball - we'll handle it in buildPhase
   dontUnpack = true;
 
-  # Build dependencies
   nativeBuildInputs = selected.nativeBuildInputs;
+  buildInputs = selected.buildInputs;
 
-  buildPhase = ''
-    # Create a temporary HOME for package manager to use during build
+  buildPhase = if runtime == "native" then ''
+    runHook preBuild
+    mkdir -p build
+    cp ${nativeBinary} build/claude-raw
+    chmod +x build/claude-raw
+    runHook postBuild
+  '' else ''
+    runHook preBuild
     export HOME=$TMPDIR
     mkdir -p $HOME/.npm $HOME/.bun
 
-    # Configure SSL certificates
     export SSL_CERT_FILE=${cacert}/etc/ssl/certs/ca-bundle.crt
     export NODE_EXTRA_CA_CERTS=$SSL_CERT_FILE
 
     ${if runtime == "node" then ''
-    # Node.js: Configure npm
     ${selected.npmBin} config set cafile $SSL_CERT_FILE
     ${selected.npmBin} config set offline true
-
-    # Install claude-code from the pre-fetched tarball
     ${selected.npmBin} install -g --prefix=$out ${claudeCodeTarball}
     '' else ''
-    # Bun: Extract tarball and install
     mkdir -p $out/lib/node_modules/@anthropic-ai
     tar -xzf ${claudeCodeTarball} -C $out/lib/node_modules/@anthropic-ai
     mv $out/lib/node_modules/@anthropic-ai/package $out/lib/node_modules/@anthropic-ai/claude-code
-
-    # Install dependencies using bun (skip scripts to avoid authorization check)
     cd $out/lib/node_modules/@anthropic-ai/claude-code
     ${selected.npmBin} install --production --ignore-scripts
     ''}
+    runHook postBuild
   '';
 
-  installPhase = ''
-    # Remove any npm-generated binary (has issues with env and paths)
+  installPhase = if runtime == "native" then ''
+    runHook preInstall
+    mkdir -p $out/bin
+
+    # Install the patched binary
+    cp build/claude-raw $out/bin/claude-raw
+    chmod +x $out/bin/claude-raw
+
+    # Create wrapper script
+    cat > $out/bin/${selected.binName} << 'WRAPPER_EOF'
+#!${bash}/bin/bash
+export CLAUDE_EXECUTABLE_PATH="$HOME/.local/bin/${selected.binName}"
+export DISABLE_AUTOUPDATER=1
+export DISABLE_INSTALLATION_CHECKS=1
+exec "$out/bin/claude-raw" "$@"
+WRAPPER_EOF
+    chmod +x $out/bin/${selected.binName}
+
+    substituteInPlace $out/bin/${selected.binName} \
+      --replace-fail '$out' "$out"
+    runHook postInstall
+  '' else ''
+    runHook preInstall
     rm -f $out/bin/claude
 
-    # Create a wrapper script that:
-    # 1. Uses NODE_PATH to find modules without changing directory
-    # 2. Runs claude from the user's current directory
-    # 3. Passes all arguments through
-    # 4. Preserves the consistent path for settings
     mkdir -p $out/bin
-    cat > $out/bin/${selected.binName} << 'EOF'
+    cat > $out/bin/${selected.binName} << 'WRAPPER_EOF'
 #!${bash}/bin/bash
-# Set NODE_PATH to find the claude-code modules
 export NODE_PATH="$out/lib/node_modules"
-
-# Set a consistent executable path for claude to prevent permission resets
-# This makes macOS and claude think it's always the same binary
 export CLAUDE_EXECUTABLE_PATH="$HOME/.local/bin/${selected.binName}"
-
-# Disable automatic update checks since updates should go through Nix
 export DISABLE_AUTOUPDATER=1
+export DISABLE_INSTALLATION_CHECKS=1
 
-# Create a temporary npm wrapper that Claude Code will use internally
-# This ensures it doesn't interfere with project npm versions
 export _CLAUDE_NPM_WRAPPER="$(mktemp -d)/npm"
 cat > "$_CLAUDE_NPM_WRAPPER" << 'NPM_EOF'
 #!${bash}/bin/bash
-# Intercept npm commands that might trigger update checks
 if [[ "$1" = "update" ]] || [[ "$1" = "outdated" ]] || [[ "$1" =~ ^view ]] && [[ "$2" =~ @anthropic-ai/claude-code ]]; then
     echo "Updates are managed through Nix. Current version: ${version}"
     exit 0
 fi
-# Pass through to bundled package manager for other commands
 exec ${selected.npmBin} "$@"
 NPM_EOF
 chmod +x "$_CLAUDE_NPM_WRAPPER"
 
-# Only add our npm wrapper to PATH for Claude Code's internal use
 export PATH="$(dirname "$_CLAUDE_NPM_WRAPPER"):$PATH"
-
-# Run claude from current directory
 exec ${selected.runCmd} "$out/lib/node_modules/@anthropic-ai/claude-code/cli.js" "$@"
-EOF
+WRAPPER_EOF
     chmod +x $out/bin/${selected.binName}
 
-    # Replace $out placeholder with the actual output path
     substituteInPlace $out/bin/${selected.binName} \
-      --replace '$out' "$out"
+      --replace-fail '$out' "$out"
+    runHook postInstall
   '';
 
   meta = with lib; {
     description = selected.description;
     homepage = "https://www.anthropic.com/claude-code";
-    license = licenses.unfree; # Claude Code is proprietary
-    platforms = if runtime == "bun"
-      then [ "aarch64-darwin" "aarch64-linux" "x86_64-darwin" "x86_64-linux" ]
-      else platforms.all;
+    license = licenses.unfree;
+    platforms = if runtime == "native" then
+      [ "aarch64-darwin" "x86_64-darwin" "x86_64-linux" "aarch64-linux" ]
+    else if runtime == "bun" then
+      [ "aarch64-darwin" "aarch64-linux" "x86_64-darwin" "x86_64-linux" ]
+    else
+      platforms.all;
+    mainProgram = selected.binName;
   };
 }

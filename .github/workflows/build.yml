@@ -19,7 +19,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest]
-        variant: [claude-code, claude-code-bun]
+        variant: [claude-code, claude-code-node, claude-code-bun]
     steps:
     - uses: actions/checkout@v4
 
@@ -49,8 +49,14 @@ jobs:
 
     - name: Test ${{ matrix.variant }}
       run: |
-        if [ "${{ matrix.variant }}" = "claude-code-bun" ]; then
-          ./result/bin/claude-bun --version
-        else
-          ./result/bin/claude --version
-        fi
+        case "${{ matrix.variant }}" in
+          claude-code)
+            ./result/bin/claude --version
+            ;;
+          claude-code-node)
+            ./result/bin/claude-node --version
+            ;;
+          claude-code-bun)
+            ./result/bin/claude-bun --version
+            ;;
+        esac
