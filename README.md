@@ -14,7 +14,7 @@ While both this flake and upstream nixpkgs provide Claude Code as a Nix package,
 2. **Dedicated Maintenance**: Focused repository for quick fixes when Claude Code changes
 3. **Flake-First Design**: Direct flake usage with Cachix binary cache
 4. **Custom Wrapper Control**: Ready to adapt when Claude Code adds new validations or requirements
-5. **Node.js 22 LTS**: Latest long-term support version for better performance and security
+5. **Native Binary Default**: Self-contained binary with no runtime dependencies, plus Node.js and Bun alternatives
 
 ### Why Not Just Use npm Global?
 
@@ -50,9 +50,9 @@ This repository provides:
 While Claude Code exists in nixpkgs, our approach offers specific advantages:
 
 1. **Always Latest Version**: Hourly automated checks vs waiting for nixpkgs PR reviews and merges
-2. **Node.js Version Control**: We use Node.js 22 LTS (upstream is locked to Node.js 20 with no override option)
-3. **Flake with Binary Cache**: Direct flake usage with Cachix means instant installation
-4. **Custom Package Implementation**: Full control over the build process with multiple runtime options (Node.js or Bun)
+2. **Native Binary Default**: Self-contained ~180MB binary with no runtime dependencies
+3. **Runtime Flexibility**: Choose between native binary, Node.js 22 LTS, or Bun
+4. **Flake with Binary Cache**: Direct flake usage with Cachix means instant installation
 5. **Dedicated Repository**: Focused maintenance without the complexity of nixpkgs contribution process
 
 ### Comparison Table
@@ -60,7 +60,8 @@ While Claude Code exists in nixpkgs, our approach offers specific advantages:
 | Feature | npm global | nixpkgs upstream | This Flake |
 |---------|------------|------------------|------------|
 | **Latest Version** | ✅ Always | ❌ Delayed | ✅ Hourly checks |
-| **Runtime Options** | ⚠️ Per Node install | 🔒 Node.js 20 | ✅ Node.js 22 or Bun |
+| **Runtime Options** | ⚠️ Per Node install | 🔒 Node.js 20 | ✅ Native, Node.js 22, or Bun |
+| **No Runtime Dependency** | ❌ Requires Node.js | ❌ Bundles Node.js | ✅ Native binary (default) |
 | **Survives Node Switch** | ❌ Lost on switch | ✅ Always available | ✅ Always available |
 | **Binary Cache** | ❌ None | ✅ NixOS cache | ✅ Cachix |
 | **Declarative Config** | ❌ None | ✅ Yes | ✅ Yes |
@@ -100,23 +101,31 @@ If you're not using Home Manager or NixOS, here's the complete workflow for mana
 ### Install
 
 ```bash
-# Node.js runtime (default)
+# Native binary (default, recommended)
 nix profile install github:sadjow/claude-code-nix
+
+# Node.js runtime
+nix profile install github:sadjow/claude-code-nix#claude-code-node
 
 # Bun runtime
 nix profile install github:sadjow/claude-code-nix#claude-code-bun
 
-# Both runtimes (different binary names)
-nix profile install github:sadjow/claude-code-nix#claude-code
-nix profile install github:sadjow/claude-code-nix#claude-code-bun
+# Multiple runtimes (different binary names)
+nix profile install github:sadjow/claude-code-nix#claude-code       # native -> claude
+nix profile install github:sadjow/claude-code-nix#claude-code-node  # node -> claude-node
+nix profile install github:sadjow/claude-code-nix#claude-code-bun   # bun -> claude-bun
 ```
 
 ### Verify Installation
 
 ```bash
-# Node.js version
+# Native version (default)
 which claude
 claude --version
+
+# Node.js version
+which claude-node
+claude-node --version
 
 # Bun version
 which claude-bun
@@ -162,36 +171,39 @@ For multi-user Nix installations, the PATH is typically configured by `/etc/prof
 
 ## Runtime Selection
 
-This flake supports two JavaScript runtimes. Node.js 22 LTS is the default.
+This flake supports three runtime options. Native binary is the default.
 
 | Runtime | Package | Binary | Command |
 |---------|---------|--------|---------|
-| Node.js 22 LTS (default) | `claude-code` | `claude` | `nix run .#claude-code` |
-| Bun 1.3.5 | `claude-code-bun` | `claude-bun` | `nix run .#claude-code-bun` |
+| Native Binary (default) | `claude-code` | `claude` | `nix run .#claude-code` |
+| Node.js 22 LTS | `claude-code-node` | `claude-node` | `nix run .#claude-code-node` |
+| Bun | `claude-code-bun` | `claude-bun` | `nix run .#claude-code-bun` |
 
 ### Quick Usage
 
 ```bash
-# Default (Node.js 22 LTS)
+# Default (Native binary)
 nix run github:sadjow/claude-code-nix
+
+# Node.js runtime
+nix run github:sadjow/claude-code-nix#claude-code-node
 
 # Bun runtime
 nix run github:sadjow/claude-code-nix#claude-code-bun
-
-# Install Bun variant
-nix profile install github:sadjow/claude-code-nix#claude-code-bun
 ```
 
-### Install Both Runtimes
+### Install Multiple Runtimes
 
-You can install both variants simultaneously for comparison:
+You can install multiple variants simultaneously for comparison:
 
 ```bash
 nix profile install github:sadjow/claude-code-nix#claude-code
+nix profile install github:sadjow/claude-code-nix#claude-code-node
 nix profile install github:sadjow/claude-code-nix#claude-code-bun
 
-# Use either
-claude --version        # Node.js
+# Use any
+claude --version        # Native
+claude-node --version   # Node.js
 claude-bun --version    # Bun
 ```
 
@@ -200,8 +212,9 @@ claude-bun --version    # Bun
 ```nix
 {
   nixpkgs.overlays = [ claude-code.overlays.default ];
-  # Both packages are now available:
-  # - pkgs.claude-code (Node.js - default)
+  # All packages are now available:
+  # - pkgs.claude-code (Native binary - default)
+  # - pkgs.claude-code-node (Node.js)
   # - pkgs.claude-code-bun (Bun)
 }
 ```
@@ -210,7 +223,8 @@ claude-bun --version    # Bun
 
 | Choose | If you need |
 |--------|-------------|
-| **Node.js (default)** | LTS stability (supported until April 2027), proven production reliability |
+| **Native (default)** | Self-contained binary (~180MB), no runtime dependencies, same as official installer |
+| **Node.js** | Prefer npm ecosystem, need specific Node.js version, or debugging JS internals |
 | **Bun** | Faster startup time, lower memory footprint, newer runtime experience |
 
 ### Custom Binary Names
@@ -219,13 +233,15 @@ You can customize the binary names when building:
 
 ```nix
 # In your flake.nix or overlay
-pkgs.claude-code.override { nodeBinName = "cc"; }
-pkgs.claude-code-bun.override { bunBinName = "claude"; }
+pkgs.claude-code.override { nativeBinName = "cc"; }
+pkgs.claude-code-node.override { nodeBinName = "cc-node"; }
+pkgs.claude-code-bun.override { bunBinName = "cc-bun"; }
 ```
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
-| `nodeBinName` | `claude` | Binary name for Node.js runtime |
+| `nativeBinName` | `claude` | Binary name for native runtime |
+| `nodeBinName` | `claude-node` | Binary name for Node.js runtime |
 | `bunBinName` | `claude-bun` | Binary name for Bun runtime |
 
 ### Optional: Enable Binary Cache for Faster Installation
@@ -352,31 +368,46 @@ All versions from v1.0.35 onwards are tagged.
 
 ### Package Architecture
 
-Our custom `package.nix` implementation:
+Our custom `package.nix` implementation supports three runtimes:
 
-1. **Pre-fetches npm tarball**: Uses Nix's Fixed Output Derivation (FOD) for reproducible, offline builds
-2. **Bundles Node.js 22 LTS**: Ensures consistent runtime environment across all systems
-3. **Custom wrapper script**: Handles PATH, environment variables, and Claude-specific requirements
-4. **Sandbox compatible**: All network fetching happens during the FOD phase, not build phase
+**Native Binary (default)**:
+- Downloads pre-built binary from Anthropic's CDN
+- Self-contained Bun single-file executable (~180MB)
+- Uses `patchelf` on Linux for NixOS compatibility
+- No external runtime dependencies
+
+**Node.js / Bun**:
+- Pre-fetches npm tarball using Nix's Fixed Output Derivation (FOD)
+- Bundles the runtime (Node.js 22 LTS or Bun)
+- Custom wrapper script handles PATH and environment variables
+- Sandbox compatible: all network fetching happens during FOD phase
+
+### Environment Variables
+
+The wrapper scripts set these environment variables:
+
+| Variable | Purpose |
+|----------|---------|
+| `DISABLE_AUTOUPDATER=1` | Prevents auto-updates (managed by Nix) |
+| `CLAUDE_EXECUTABLE_PATH` | Consistent path for macOS permission persistence |
+| `DISABLE_INSTALLATION_CHECKS=1` | Suppresses npm migration warning |
 
 ### Runtime Options
 
-This package supports multiple JavaScript runtimes via parameterization:
+**Native (default)**:
+- Same binary as official `claude.ai/install.sh`
+- Self-contained, no runtime dependencies
+- Fastest installation (single binary download)
 
-**Node.js 22 LTS (default)**:
+**Node.js 22 LTS**:
 - Long-term stability and support until April 2027
 - Better performance than Node.js 20 (upstream nixpkgs version)
 - Latest LTS with all security updates
 
-**Bun 1.3.5**:
+**Bun**:
 - Faster startup times
 - Lower memory footprint
 - Modern runtime with excellent Node.js compatibility
-
-### Future Enhancements
-
-- **Deno**: Enhanced security model and TypeScript support (planned)
-- **Additional runtimes**: Community contributions welcome
 
 ## Development
 
@@ -385,10 +416,11 @@ This package supports multiple JavaScript runtimes via parameterization:
 git clone https://github.com/sadjow/claude-code-nix
 cd claude-code-nix
 
-# Build the default package (Node.js)
+# Build the default package (native binary)
 nix build
 
-# Build the Bun variant
+# Build other variants
+nix build .#claude-code-node
 nix build .#claude-code-bun
 
 # Run tests
@@ -442,9 +474,10 @@ This means new Claude Code versions are typically available in this flake within
 
 The script automatically:
 - Updates the version in `package.nix`
-- Fetches and calculates the tarball hash
+- Fetches npm tarball hash for Node.js/Bun runtimes
+- Fetches native binary hashes for all platforms (darwin-arm64, darwin-x64, linux-x64, linux-arm64)
 - Updates `flake.lock` with latest nixpkgs
-- Verifies the build succeeds
+- Verifies builds succeed for native and Node.js variants
 
 #### Manual Process
 
@@ -488,7 +521,7 @@ rm -rf ~/.claude ~/.claude.json
 
 ### Official Native Install
 
-In late 2025, Anthropic introduced an official native install:
+Anthropic provides an official native installer:
 
 ```bash
 curl -fsSL https://claude.ai/install.sh | sh
@@ -501,8 +534,9 @@ This downloads a self-contained binary bundled with Bun runtime.
 | Aspect | Official Native Install | This Nix Flake |
 |--------|------------------------|----------------|
 | **Simplicity** | ✅ One command | Requires Nix |
+| **Same Binary** | ✅ Yes | ✅ Yes (default native option) |
 | **Latest Version** | ⚠️ Can lag behind npm | ✅ Hourly updates |
-| **Runtime** | Bun | Node.js 22 LTS or Bun |
+| **Runtime Options** | Bun only | Native, Node.js, or Bun |
 | **Version Pinning** | ❌ No | ✅ Git tags |
 | **Rollback** | ❌ Manual | ✅ `nix profile rollback` |
 | **Declarative** | ❌ No | ✅ NixOS/Home Manager |
@@ -510,7 +544,7 @@ This downloads a self-contained binary bundled with Bun runtime.
 
 **Choose official native install if**: You want the simplest setup or don't use Nix.
 
-**Choose this flake if**: You use NixOS/Home Manager, need version pinning, want the latest version, or prefer declarative configuration.
+**Choose this flake if**: You use NixOS/Home Manager, need version pinning, want the latest version, prefer declarative configuration, or want runtime flexibility.
 
 ## License
 
