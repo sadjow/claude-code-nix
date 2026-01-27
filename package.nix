@@ -116,7 +116,7 @@ stdenv.mkDerivation rec {
     runHook preBuild
     mkdir -p build
     cp ${nativeBinary} build/claude-raw
-    chmod +x build/claude-raw
+    chmod u+w,+x build/claude-raw
 
     ${lib.optionalString stdenv.isLinux ''
     # Patch only the interpreter for NixOS compatibility
