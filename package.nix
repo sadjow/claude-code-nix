@@ -15,7 +15,6 @@
 , cacert
 , bash
 , patchelf
-, autoPatchelfHook
 , runtime ? "native"  # "native", "node", or "bun"
 , nativeBinName ? "claude"
 , nodeBinName ? "claude-node"
@@ -65,8 +64,9 @@ let
   # Runtime-specific configuration
   runtimeConfig = {
     native = {
-      nativeBuildInputs = lib.optionals stdenv.isLinux [ patchelf autoPatchelfHook ];
-      buildInputs = lib.optionals stdenv.isLinux [ stdenv.cc.cc.lib ];
+      # Only patchelf needed for Linux - no autoPatchelfHook as it corrupts the Bun trailer
+      nativeBuildInputs = lib.optionals stdenv.isLinux [ patchelf ];
+      buildInputs = [];
       description = "Claude Code (Native Binary) - AI coding assistant in your terminal";
       binName = nativeBinName;
     };
@@ -105,6 +105,10 @@ stdenv.mkDerivation rec {
 
   dontUnpack = true;
 
+  # For native runtime: disable automatic patching/stripping which corrupts the Bun trailer
+  dontPatchELF = runtime == "native";
+  dontStrip = runtime == "native";
+
   nativeBuildInputs = selected.nativeBuildInputs;
   buildInputs = selected.buildInputs;
 
@@ -113,6 +117,19 @@ stdenv.mkDerivation rec {
     mkdir -p build
     cp ${nativeBinary} build/claude-raw
     chmod +x build/claude-raw
+
+    ${lib.optionalString stdenv.isLinux ''
+    # Patch only the interpreter for NixOS compatibility
+    # Do NOT use --set-rpath as it corrupts the Bun embedded payload
+    patchelf --set-interpreter "$(cat ${stdenv.cc}/nix-support/dynamic-linker)" build/claude-raw
+
+    # Verify the Bun trailer is still intact
+    if ! tail -c 20 build/claude-raw | grep -q "Bun!"; then
+      echo "ERROR: Bun trailer was corrupted by patchelf!"
+      exit 1
+    fi
+    ''}
+
     runHook postBuild
   '' else ''
     runHook preBuild
