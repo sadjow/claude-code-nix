@@ -57,15 +57,18 @@ update_package_version() {
 update_npm_hash() {
     local hash="$1"
     # Update the npm tarball hash (the one after claudeCodeTarball fetchurl)
-    # This is a bit tricky since there are multiple sha256 entries
-    # We use a marker pattern to identify the right one
+    # claudeCodeTarball and fetchurl are on different lines, so we need
+    # to track state across multiple lines
     local temp_file=$(mktemp)
     awk -v hash="$hash" '
-        /claudeCodeTarball.*fetchurl/ { in_npm_block=1 }
-        in_npm_block && /sha256 = / {
+        /claudeCodeTarball = / { in_tarball_block=1 }
+        in_tarball_block && /fetchurl/ { in_fetchurl_block=1 }
+        in_fetchurl_block && /sha256 = / {
             sub(/sha256 = "[^"]*"/, "sha256 = \"" hash "\"")
-            in_npm_block=0
+            in_tarball_block=0
+            in_fetchurl_block=0
         }
+        in_tarball_block && /^[[:space:]]*else/ { in_tarball_block=0 }
         { print }
     ' package.nix > "$temp_file"
     mv "$temp_file" package.nix
