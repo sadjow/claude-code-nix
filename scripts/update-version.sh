@@ -13,23 +13,46 @@ readonly NATIVE_BASE_URL="https://storage.googleapis.com/claude-code-dist-86c565
 # Native binary platforms
 readonly NATIVE_PLATFORMS=("darwin-arm64" "darwin-x64" "linux-x64" "linux-arm64")
 
+readonly MAX_RETRIES=3
+readonly RETRY_BASE_DELAY=2
+
 log_info() { echo -e "${GREEN}[INFO]${NC} $1"; }
 log_warn() { echo -e "${YELLOW}[WARN]${NC} $1"; }
 log_error() { echo -e "${RED}[ERROR]${NC} $1"; }
+
+retry() {
+    local max_attempts="$1"
+    local base_delay="$2"
+    shift 2
+
+    for ((attempt = 1; attempt <= max_attempts; attempt++)); do
+        local result
+        result=$("$@") && [ -n "$result" ] && { echo "$result"; return 0; }
+
+        if ((attempt < max_attempts)); then
+            local delay=$((base_delay ** attempt))
+            log_warn "Attempt $attempt/$max_attempts failed, retrying in ${delay}s..."
+            sleep "$delay"
+        fi
+    done
+
+    return 1
+}
 
 get_current_version() {
     sed -n 's/.*version = "\([^"]*\)".*/\1/p' package.nix | head -1 || echo "unknown"
 }
 
-get_latest_version_from_npm() {
+fetch_npm_version() {
     if command -v curl >/dev/null 2>&1; then
-        curl -s "$NPM_REGISTRY_URL/$PACKAGE_NAME/latest" | sed -n 's/.*"version":"\([^"]*\)".*/\1/p'
+        curl -sf --max-time 10 "$NPM_REGISTRY_URL/$PACKAGE_NAME/latest" | sed -n 's/.*"version":"\([^"]*\)".*/\1/p'
     else
-        npm view "$PACKAGE_NAME" version 2>/dev/null || {
-            log_error "Failed to fetch latest version from npm"
-            exit 1
-        }
+        npm view "$PACKAGE_NAME" version 2>/dev/null
     fi
+}
+
+get_latest_version_from_npm() {
+    retry "$MAX_RETRIES" "$RETRY_BASE_DELAY" fetch_npm_version
 }
 
 fetch_tarball_hash() {
@@ -227,10 +250,16 @@ main() {
     local check_only=$(echo "$args" | cut -d'|' -f2)
 
     local current_version=$(get_current_version)
-    local latest_version=$(get_latest_version_from_npm)
+    local latest_version
 
     if [ -n "$target_version" ]; then
         latest_version="$target_version"
+    else
+        latest_version=$(get_latest_version_from_npm) || true
+        if [ -z "$latest_version" ]; then
+            log_error "Failed to fetch latest version from npm after $MAX_RETRIES attempts"
+            exit 1
+        fi
     fi
 
     log_info "Current version: $current_version"
