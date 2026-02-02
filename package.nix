@@ -203,13 +203,12 @@ stdenv.mkDerivation rec {
     description = selected.description;
     homepage = "https://www.anthropic.com/claude-code";
     license = licenses.unfree;
-    platforms =
-      if runtime == "native" then
-        [ "aarch64-darwin" "x86_64-darwin" "x86_64-linux" "aarch64-linux" ]
-      else if runtime == "bun" then
-        [ "aarch64-darwin" "aarch64-linux" "x86_64-darwin" "x86_64-linux" ]
-      else
-        platforms.all;
+    platforms = if runtime == "native" then
+      [ "aarch64-darwin" "x86_64-darwin" "x86_64-linux" "aarch64-linux" ]
+    else if runtime == "bun" then
+      [ "aarch64-darwin" "aarch64-linux" "x86_64-darwin" "x86_64-linux" ]
+    else
+      platforms.all;
     mainProgram = selected.binName;
   };
 }
