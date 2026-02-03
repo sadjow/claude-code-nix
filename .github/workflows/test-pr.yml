@@ -7,12 +7,15 @@ on:
       - 'flake.nix'
       - 'flake.lock'
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test-build:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest]
-        variant: [claude-code, claude-code-node, claude-code-bun]
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout repository
@@ -35,55 +38,44 @@ jobs:
           authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
           skipPush: true
 
-      - name: Build ${{ matrix.variant }}
+      - name: Build all variants
         run: |
-          nix build .#${{ matrix.variant }} --print-build-logs
+          echo "Building claude-code (native)..."
+          nix build .#claude-code -o result-native --print-build-logs
+          echo "Building claude-code-node..."
+          nix build .#claude-code-node -o result-node --print-build-logs
+          echo "Building claude-code-bun..."
+          nix build .#claude-code-bun -o result-bun --print-build-logs
 
-      - name: Test claude version
+      - name: Test claude versions
         run: |
-          case "${{ matrix.variant }}" in
-            claude-code)
-              ./result/bin/claude --version
-              ;;
-            claude-code-node)
-              ./result/bin/claude-node --version
-              ;;
-            claude-code-bun)
-              ./result/bin/claude-bun --version
-              ;;
-          esac
+          echo "Testing claude-code (native)..."
+          ./result-native/bin/claude --version
+          echo "Testing claude-code-node..."
+          ./result-node/bin/claude-node --version
+          echo "Testing claude-code-bun..."
+          ./result-bun/bin/claude-bun --version
 
       - name: Verify package contents
         run: |
-          case "${{ matrix.variant }}" in
-            claude-code)
-              # Native binary - check for raw binary and wrapper
-              test -f ./result/bin/claude
-              test -f ./result/bin/claude-raw
-              ;;
-            claude-code-node)
-              test -f ./result/bin/claude-node
-              test -d ./result/lib/node_modules/@anthropic-ai/claude-code
-              ;;
-            claude-code-bun)
-              test -f ./result/bin/claude-bun
-              test -d ./result/lib/node_modules/@anthropic-ai/claude-code
-              ;;
-          esac
+          echo "Verifying claude-code (native)..."
+          test -f ./result-native/bin/claude
+          test -f ./result-native/bin/claude-raw
+          echo "Verifying claude-code-node..."
+          test -f ./result-node/bin/claude-node
+          test -d ./result-node/lib/node_modules/@anthropic-ai/claude-code
+          echo "Verifying claude-code-bun..."
+          test -f ./result-bun/bin/claude-bun
+          test -d ./result-bun/lib/node_modules/@anthropic-ai/claude-code
 
       - name: Run basic functionality test
         run: |
-          case "${{ matrix.variant }}" in
-            claude-code)
-              ./result/bin/claude --help || true
-              ./result/bin/claude --version 2>&1 | grep -E "claude-code|Claude"
-              ;;
-            claude-code-node)
-              ./result/bin/claude-node --help || true
-              ./result/bin/claude-node --version 2>&1 | grep -E "claude-code|Claude"
-              ;;
-            claude-code-bun)
-              ./result/bin/claude-bun --help || true
-              ./result/bin/claude-bun --version 2>&1 | grep -E "claude-code|Claude"
-              ;;
-          esac
+          echo "Testing claude-code (native)..."
+          ./result-native/bin/claude --help || true
+          ./result-native/bin/claude --version 2>&1 | grep -E "claude-code|Claude"
+          echo "Testing claude-code-node..."
+          ./result-node/bin/claude-node --help || true
+          ./result-node/bin/claude-node --version 2>&1 | grep -E "claude-code|Claude"
+          echo "Testing claude-code-bun..."
+          ./result-bun/bin/claude-bun --help || true
+          ./result-bun/bin/claude-bun --version 2>&1 | grep -E "claude-code|Claude"

@@ -11,6 +11,10 @@ on:
       - completed
     branches: [ main ]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     # Only run if not triggered by workflow_run or if the workflow succeeded
@@ -19,7 +23,6 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest]
-        variant: [claude-code, claude-code-node, claude-code-bun]
     steps:
     - uses: actions/checkout@v4
 
@@ -38,25 +41,28 @@ jobs:
         name: claude-code
         authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
 
-    - name: Build ${{ matrix.variant }}
+    - name: Build all variants
       run: |
-        nix build .#${{ matrix.variant }}
+        echo "Building claude-code (native)..."
+        nix build .#claude-code -o result-native
+        echo "Building claude-code-node..."
+        nix build .#claude-code-node -o result-node
+        echo "Building claude-code-bun..."
+        nix build .#claude-code-bun -o result-bun
 
     - name: Push to Cachix
       if: github.ref == 'refs/heads/main'
       run: |
-        nix build .#${{ matrix.variant }} --json | jq -r '.[].outputs.out' | cachix push claude-code
+        nix build .#claude-code --json | jq -r '.[].outputs.out' | cachix push claude-code
+        nix build .#claude-code-node --json | jq -r '.[].outputs.out' | cachix push claude-code
+        nix build .#claude-code-bun --json | jq -r '.[].outputs.out' | cachix push claude-code
 
-    - name: Test ${{ matrix.variant }}
+    - name: Test all variants
       run: |
-        case "${{ matrix.variant }}" in
-          claude-code)
-            ./result/bin/claude --version
-            ;;
-          claude-code-node)
-            ./result/bin/claude-node --version
-            ;;
-          claude-code-bun)
-            ./result/bin/claude-bun --version
-            ;;
-        esac
+        echo "Testing claude-code (native)..."
+        ./result-native/bin/claude --version
+        echo "Testing claude-code-node..."
+        ./result-node/bin/claude-node --version
+        echo "Testing claude-code-bun..."
+        ./result-bun/bin/claude-bun --version
+
