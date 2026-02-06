@@ -151,6 +151,7 @@ stdenv.mkDerivation rec {
 
       makeBinaryWrapper $out/bin/.claude-unwrapped $out/bin/${selected.binName} \
         --set DISABLE_AUTOUPDATER 1 \
+        --set DISABLE_INSTALLATION_CHECKS 1 \
         --set USE_BUILTIN_RIPGREP 0 \
         --prefix PATH : ${
           lib.makeBinPath (
@@ -167,37 +168,37 @@ stdenv.mkDerivation rec {
 
       runHook postInstall
     '' else ''
-          runHook preInstall
-          rm -f $out/bin/claude
+    runHook preInstall
+    rm -f $out/bin/claude
 
-          mkdir -p $out/bin
-          cat > $out/bin/${selected.binName} << 'WRAPPER_EOF'
-      #!${bash}/bin/bash
-      export NODE_PATH="$out/lib/node_modules"
-      export CLAUDE_EXECUTABLE_PATH="$HOME/.local/bin/${selected.binName}"
-      export DISABLE_AUTOUPDATER=1
-      export DISABLE_INSTALLATION_CHECKS=1
+    mkdir -p $out/bin
+    cat > $out/bin/${selected.binName} << 'WRAPPER_EOF'
+#!${bash}/bin/bash
+export NODE_PATH="$out/lib/node_modules"
+export CLAUDE_EXECUTABLE_PATH="$HOME/.local/bin/${selected.binName}"
+export DISABLE_AUTOUPDATER=1
+export DISABLE_INSTALLATION_CHECKS=1
 
-      export _CLAUDE_NPM_WRAPPER="$(mktemp -d)/npm"
-      cat > "$_CLAUDE_NPM_WRAPPER" << 'NPM_EOF'
-      #!${bash}/bin/bash
-      if [[ "$1" = "update" ]] || [[ "$1" = "outdated" ]] || [[ "$1" =~ ^view ]] && [[ "$2" =~ @anthropic-ai/claude-code ]]; then
-          echo "Updates are managed through Nix. Current version: ${version}"
-          exit 0
-      fi
-      exec ${selected.npmBin} "$@"
-      NPM_EOF
-      chmod +x "$_CLAUDE_NPM_WRAPPER"
+export _CLAUDE_NPM_WRAPPER="$(mktemp -d)/npm"
+cat > "$_CLAUDE_NPM_WRAPPER" << 'NPM_EOF'
+#!${bash}/bin/bash
+if [[ "$1" = "update" ]] || [[ "$1" = "outdated" ]] || [[ "$1" =~ ^view ]] && [[ "$2" =~ @anthropic-ai/claude-code ]]; then
+    echo "Updates are managed through Nix. Current version: ${version}"
+    exit 0
+fi
+exec ${selected.npmBin} "$@"
+NPM_EOF
+chmod +x "$_CLAUDE_NPM_WRAPPER"
 
-      export PATH="$(dirname "$_CLAUDE_NPM_WRAPPER"):$PATH"
-      exec ${selected.runCmd} "$out/lib/node_modules/@anthropic-ai/claude-code/cli.js" "$@"
-      WRAPPER_EOF
-          chmod +x $out/bin/${selected.binName}
+export PATH="$(dirname "$_CLAUDE_NPM_WRAPPER"):$PATH"
+exec ${selected.runCmd} "$out/lib/node_modules/@anthropic-ai/claude-code/cli.js" "$@"
+WRAPPER_EOF
+    chmod +x $out/bin/${selected.binName}
 
-          substituteInPlace $out/bin/${selected.binName} \
-            --replace-fail '$out' "$out"
-          runHook postInstall
-    '';
+    substituteInPlace $out/bin/${selected.binName} \
+      --replace-fail '$out' "$out"
+    runHook postInstall
+  '';
 
   meta = with lib; {
     description = selected.description;
