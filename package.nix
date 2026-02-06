@@ -14,7 +14,12 @@
 , bun
 , cacert
 , bash
-, patchelf
+, makeBinaryWrapper
+, autoPatchelfHook
+, procps
+, ripgrep
+, bubblewrap
+, socat
 , runtime ? "native"  # "native", "node", or "bun"
 , nativeBinName ? "claude"
 , nodeBinName ? "claude-node"
@@ -64,8 +69,8 @@ let
   # Runtime-specific configuration
   runtimeConfig = {
     native = {
-      # Only patchelf needed for Linux - no autoPatchelfHook as it corrupts the Bun trailer
-      nativeBuildInputs = lib.optionals stdenv.isLinux [ patchelf ];
+      nativeBuildInputs = [ makeBinaryWrapper ]
+        ++ lib.optionals stdenv.hostPlatform.isElf [ autoPatchelfHook ];
       buildInputs = [];
       description = "Claude Code (Native Binary) - AI coding assistant in your terminal";
       binName = nativeBinName;
@@ -105,76 +110,64 @@ stdenv.mkDerivation rec {
 
   dontUnpack = true;
 
-  # For native runtime: disable automatic patching/stripping which corrupts the Bun trailer
-  dontPatchELF = runtime == "native";
+  # For native runtime: disable stripping which corrupts the Bun trailer
   dontStrip = runtime == "native";
 
   nativeBuildInputs = selected.nativeBuildInputs;
   buildInputs = selected.buildInputs;
 
-  buildPhase = if runtime == "native" then ''
-    runHook preBuild
-    mkdir -p build
-    cp ${nativeBinary} build/claude-raw
-    chmod u+w,+x build/claude-raw
-
-    ${lib.optionalString stdenv.isLinux ''
-    # Patch only the interpreter for NixOS compatibility
-    # Do NOT use --set-rpath as it corrupts the Bun embedded payload
-    patchelf --set-interpreter "$(cat ${stdenv.cc}/nix-support/dynamic-linker)" build/claude-raw
-
-    # Verify the Bun trailer is still intact
-    if ! tail -c 20 build/claude-raw | grep -q "Bun!"; then
-      echo "ERROR: Bun trailer was corrupted by patchelf!"
-      exit 1
-    fi
-    ''}
-
-    runHook postBuild
-  '' else ''
-    runHook preBuild
-    export HOME=$TMPDIR
-    mkdir -p $HOME/.npm $HOME/.bun
-
-    export SSL_CERT_FILE=${cacert}/etc/ssl/certs/ca-bundle.crt
-    export NODE_EXTRA_CA_CERTS=$SSL_CERT_FILE
-
-    ${if runtime == "node" then ''
-    ${selected.npmBin} config set cafile $SSL_CERT_FILE
-    ${selected.npmBin} config set offline true
-    ${selected.npmBin} install -g --prefix=$out ${claudeCodeTarball}
+  buildPhase =
+    if runtime == "native" then ''
+      runHook preBuild
+      runHook postBuild
     '' else ''
-    mkdir -p $out/lib/node_modules/@anthropic-ai
-    tar -xzf ${claudeCodeTarball} -C $out/lib/node_modules/@anthropic-ai
-    mv $out/lib/node_modules/@anthropic-ai/package $out/lib/node_modules/@anthropic-ai/claude-code
-    cd $out/lib/node_modules/@anthropic-ai/claude-code
-    ${selected.npmBin} install --production --ignore-scripts
-    ''}
-    runHook postBuild
-  '';
+      runHook preBuild
+      export HOME=$TMPDIR
+      mkdir -p $HOME/.npm $HOME/.bun
 
-  installPhase = if runtime == "native" then ''
-    runHook preInstall
-    mkdir -p $out/bin
+      export SSL_CERT_FILE=${cacert}/etc/ssl/certs/ca-bundle.crt
+      export NODE_EXTRA_CA_CERTS=$SSL_CERT_FILE
 
-    # Install the patched binary
-    cp build/claude-raw $out/bin/claude-raw
-    chmod +x $out/bin/claude-raw
+      ${if runtime == "node" then ''
+      ${selected.npmBin} config set cafile $SSL_CERT_FILE
+      ${selected.npmBin} config set offline true
+      ${selected.npmBin} install -g --prefix=$out ${claudeCodeTarball}
+      '' else ''
+      mkdir -p $out/lib/node_modules/@anthropic-ai
+      tar -xzf ${claudeCodeTarball} -C $out/lib/node_modules/@anthropic-ai
+      mv $out/lib/node_modules/@anthropic-ai/package $out/lib/node_modules/@anthropic-ai/claude-code
+      cd $out/lib/node_modules/@anthropic-ai/claude-code
+      ${selected.npmBin} install --production --ignore-scripts
+      ''}
+      runHook postBuild
+    '';
 
-    # Create wrapper script
-    cat > $out/bin/${selected.binName} << 'WRAPPER_EOF'
-#!${bash}/bin/bash
-export CLAUDE_EXECUTABLE_PATH="$HOME/.local/bin/${selected.binName}"
-export DISABLE_AUTOUPDATER=1
-export DISABLE_INSTALLATION_CHECKS=1
-exec "$out/bin/claude-raw" "$@"
-WRAPPER_EOF
-    chmod +x $out/bin/${selected.binName}
+  installPhase =
+    if runtime == "native" then ''
+      runHook preInstall
+      mkdir -p $out/bin
 
-    substituteInPlace $out/bin/${selected.binName} \
-      --replace-fail '$out' "$out"
-    runHook postInstall
-  '' else ''
+      install -m755 ${nativeBinary} $out/bin/.claude-unwrapped
+
+      makeBinaryWrapper $out/bin/.claude-unwrapped $out/bin/${selected.binName} \
+        --set DISABLE_AUTOUPDATER 1 \
+        --set DISABLE_INSTALLATION_CHECKS 1 \
+        --set USE_BUILTIN_RIPGREP 0 \
+        --prefix PATH : ${
+          lib.makeBinPath (
+            [
+              procps
+              ripgrep
+            ]
+            ++ lib.optionals stdenv.hostPlatform.isLinux [
+              bubblewrap
+              socat
+            ]
+          )
+        }
+
+      runHook postInstall
+    '' else ''
     runHook preInstall
     rm -f $out/bin/claude
 
