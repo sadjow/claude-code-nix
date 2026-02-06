@@ -60,7 +60,7 @@ jobs:
         run: |
           echo "Verifying claude-code (native)..."
           test -f ./result-native/bin/claude
-          test -f ./result-native/bin/claude-raw
+          test -f ./result-native/bin/.claude-unwrapped
           echo "Verifying claude-code-node..."
           test -f ./result-node/bin/claude-node
           test -d ./result-node/lib/node_modules/@anthropic-ai/claude-code
