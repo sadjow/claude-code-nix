@@ -150,6 +150,7 @@ stdenv.mkDerivation rec {
       install -m755 ${nativeBinary} $out/bin/.claude-unwrapped
 
       makeBinaryWrapper $out/bin/.claude-unwrapped $out/bin/${selected.binName} \
+        --inherit-argv0 \
         --set DISABLE_AUTOUPDATER 1 \
         --set DISABLE_INSTALLATION_CHECKS 1 \
         --set USE_BUILTIN_RIPGREP 0 \
