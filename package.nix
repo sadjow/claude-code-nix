@@ -27,7 +27,7 @@
 }:
 
 let
-  version = "2.1.61";
+  version = "2.1.62";
 
   # Platform mapping for native binaries (Nix system -> Anthropic platform)
   platformMap = {
@@ -41,10 +41,10 @@ let
 
   # Native binary hashes per platform
   nativeHashes = {
-    "darwin-arm64" = "1nygqrppmcwgml7mlsqrgifkpsk24rl6dnz3fpwb5zvffh33fp9z";
-    "darwin-x64" = "1wkdm0w0shgvh8i1xx4sknb8gx9slgnxq95v7z44lzc66g31cj6l";
-    "linux-x64" = "0cdhdrvi3i0d7f6l8m4clvjwknq649kjfr6cnvqb4fgfnc3mkhdi";
-    "linux-arm64" = "0phcbk22frg7r9z2flra8pa31rv32cj8kjrcs4q4bsy6b30dmwf9";
+    "darwin-arm64" = "1rym7hchs16myvg21br26a418jn7rcqkcgay2fanlrqr2mb17y4l";
+    "darwin-x64" = "1agky51jzmbhnp0ww8x3ssbjz56vac8cy4cj4z9is44kvsf637aa";
+    "linux-x64" = "1d3i2h3lby7m1753888dqi1fcdcip8llb5j3q8q7ljz9p1n75w6n";
+    "linux-arm64" = "0dwdqyj7975swhj4yw6bm2ix8z21zw5ay9pfszlpacx248m2yv39";
   };
 
   # Native binary URL
@@ -62,7 +62,7 @@ let
   claudeCodeTarball = if runtime != "native" then
     fetchurl {
       url = "https://registry.npmjs.org/@anthropic-ai/claude-code/-/claude-code-${version}.tgz";
-      sha256 = "02r1xjab1q32l231n9drpyqipv9w3kba69c0s98ll0brbkcs04ry";
+      sha256 = "0bnd4pwnb6rbd62j2h969bal45c4nxxhs44895l8n14xzjk21njf";
     }
   else null;
 
