@@ -6,7 +6,6 @@ updates:
       interval: "weekly"
       day: "saturday"
       time: "09:00"
-      timezone: "America/Fortaleza"
     labels:
       - "dependencies"
       - "automated"
