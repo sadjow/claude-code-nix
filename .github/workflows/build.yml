@@ -35,7 +35,7 @@ jobs:
       env:
         NIX_FIRST_BUILD_UID: 400
 
-    - uses: cachix/cachix-action@97e5ff84d02b3b4f9936339f767e17f03c9252ed # v16
+    - uses: cachix/cachix-action@3ba601ff5bbb07c7220846facfa2cd81eeee15a1 # v16
       if: github.ref == 'refs/heads/main'
       with:
         name: claude-code
