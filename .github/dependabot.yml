@@ -1,0 +1,14 @@
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "saturday"
+      time: "09:00"
+    labels:
+      - "dependencies"
+      - "automated"
+    commit-message:
+      prefix: "ci"
+    open-pull-requests-limit: 5
