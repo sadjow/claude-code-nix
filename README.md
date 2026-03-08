@@ -65,7 +65,7 @@ While Claude Code exists in nixpkgs, our approach offers specific advantages:
 | **Survives Node Switch** | ❌ Lost on switch | ✅ Always available | ✅ Always available |
 | **Binary Cache** | ❌ None | ✅ NixOS cache | ✅ Cachix |
 | **Declarative Config** | ❌ None | ✅ Yes | ✅ Yes |
-| **Version Pinning** | ⚠️ Manual | ✅ Channel-based | ✅ Git tags (v2.0.76, v2, latest) |
+| **Exact Version Pinning** | ⚠️ Manual | ✅ Nixpkgs revision | ✅ Exact tags (`v2.1.71`) or commit SHAs |
 | **Update Frequency** | ✅ Immediate | ⚠️ Weeks | ✅ < 1 hour |
 | **Reproducible** | ❌ No | ✅ Yes | ✅ Yes |
 | **Sandbox Builds** | ❌ N/A | ✅ Yes | ✅ Yes |
@@ -256,6 +256,8 @@ nix-env -iA cachix -f https://cachix.org/api/v1/install
 cachix use claude-code
 ```
 
+Using Cachix adds trust in this project's binary cache. If you prefer to verify builds locally from pinned source, skip Cachix and let Nix build locally instead.
+
 Or add to your Nix configuration:
 
 ```nix
@@ -317,31 +319,34 @@ With Home Manager, add to your configuration:
 }
 ```
 
-## Version Pinning
+## Version Pinning and Update Channels
 
-Pin to specific Claude Code versions using git refs:
+Choose between immutable pins and moving update channels using git refs.
 
-### Available Tags
+Only exact version tags such as `v2.1.71` or an exact commit SHA are true pins. `v2`, `latest`, and the bare `github:sadjow/claude-code-nix` reference are moving refs that intentionally follow newer commits over time.
 
-| Tag | Example | Behavior |
-|-----|---------|----------|
-| `vX.Y.Z` | `v2.0.76` | Exact version (immutable) |
-| `vX` | `v2` | Latest in major series (updates automatically) |
-| `latest` | `latest` | Always newest version (updates automatically) |
+### Available Refs
+
+| Ref | Example | Behavior | Security Posture |
+|-----|---------|----------|------------------|
+| Exact version tag | `v2.1.71` | Immutable release tag | Best default for reproducible installs |
+| Major tag | `v2` | Latest release in that major line | Moving channel, updates over time |
+| `latest` tag | `latest` | Newest release | Moving channel, updates over time |
+| Default branch | `github:sadjow/claude-code-nix` | Tracks repository `main` | Moving channel, fastest updates |
 
 ### Usage Examples
 
 ```bash
-# Always latest (default)
+# Always latest from the default branch
 nix run github:sadjow/claude-code-nix
 
-# Pin to exact version
-nix run github:sadjow/claude-code-nix?ref=v2.0.76
+# Pin to an exact immutable release
+nix run github:sadjow/claude-code-nix?ref=v2.1.71
 
 # Track latest v2.x (auto-updates)
 nix run github:sadjow/claude-code-nix?ref=v2
 
-# Track latest v1.x (stays at v1.0.128)
+# Track latest v1.x
 nix run github:sadjow/claude-code-nix?ref=v1
 ```
 
@@ -350,11 +355,11 @@ nix run github:sadjow/claude-code-nix?ref=v1
 ```nix
 {
   inputs = {
-    # Always latest
+    # Always latest from the default branch
     claude-code.url = "github:sadjow/claude-code-nix";
 
-    # Pin to exact version
-    claude-code.url = "github:sadjow/claude-code-nix?ref=v2.0.76";
+    # Pin to an exact immutable release
+    claude-code.url = "github:sadjow/claude-code-nix?ref=v2.1.71";
 
     # Track major version
     claude-code.url = "github:sadjow/claude-code-nix?ref=v2";
@@ -363,6 +368,44 @@ nix run github:sadjow/claude-code-nix?ref=v1
 ```
 
 All versions from v1.0.35 onwards are tagged.
+
+If you use this repository as a flake input, your own `flake.lock` records the resolved commit. Exact tags and commit SHAs give the strongest control; moving refs such as `main`, `v2`, and `latest` only change when you update your own lock file.
+
+## Security / Trust Model
+
+This repository is optimized for fast Claude Code updates. That makes the trust model worth stating explicitly.
+
+### What is verified today
+
+- `package.nix` fetches the npm tarball and native binaries with fixed hashes, so a build only succeeds if the downloaded artifacts match the expected content.
+- `flake.lock` pins the flake inputs for a given repository revision.
+- The packaged binaries disable Claude's built-in auto-updater, so updates happen through Nix rather than self-modification.
+- CI builds and smoke-tests all supported variants before update PRs land on `main`.
+
+### What still requires trust
+
+- Trusting this repo means trusting the maintainer account and the GitHub Actions update workflow that creates and auto-merges version bump PRs.
+- The upstream artifacts still come from Anthropic's npm package and native binary distribution.
+- Using the `claude-code` Cachix cache adds trust in this project's substituter key. Building locally avoids that extra trust layer.
+- Moving refs such as `main`, `v2`, and `latest` trade stricter change control for convenience and freshness.
+
+### Recommended setups
+
+| Goal | Recommended Setup |
+|------|-------------------|
+| Highest assurance | Pin an exact commit SHA, skip Cachix, and build locally |
+| Balanced default | Pin an exact version tag and optionally use Cachix for faster installs |
+| Fastest updates | Track the default branch, `vX`, or `latest` and accept the faster update cadence |
+
+### Forking
+
+Forking is a valid option if you want to fully control update cadence, review upstream diffs yourself, or add additional policy checks before merging updates.
+
+For most users, pinning an exact version tag is simpler and usually enough. A fork only meaningfully improves security if you also add your own review gate instead of automatically tracking upstream.
+
+### Prefer Broader Review Over Speed?
+
+If you prefer a slower update cadence with broader community review, upstream `nixpkgs` may be a better fit than this flake.
 
 ## Technical Details
 
@@ -452,7 +495,7 @@ The automated update workflow runs:
 - Every hour (at the top of the hour)
 - On manual trigger via GitHub Actions UI
 
-This means new Claude Code versions are typically available in this flake within 30 minutes of being published to npm!
+This workflow is designed for freshness and build validation, not for manual review of every upstream release. New Claude Code versions are typically available in this flake within 30 minutes of being published to npm.
 
 ### Manual Updates
 
@@ -544,7 +587,7 @@ This downloads a self-contained binary bundled with Bun runtime.
 
 **Choose official native install if**: You want the simplest setup or don't use Nix.
 
-**Choose this flake if**: You use NixOS/Home Manager, need version pinning, want the latest version, prefer declarative configuration, or want runtime flexibility.
+**Choose this flake if**: You use NixOS/Home Manager, want declarative configuration, need runtime flexibility, and are comfortable choosing between exact pins and faster-moving update channels.
 
 ## License
 
