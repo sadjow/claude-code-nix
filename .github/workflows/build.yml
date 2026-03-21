@@ -23,6 +23,8 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest]
+    env:
+      CACHIX_AUTH_TOKEN: ${{ secrets.CACHIX_AUTH_TOKEN }}
     steps:
     - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
@@ -36,7 +38,7 @@ jobs:
         NIX_FIRST_BUILD_UID: 400
 
     - uses: cachix/cachix-action@3ba601ff5bbb07c7220846facfa2cd81eeee15a1 # v16
-      if: ${{ github.ref == 'refs/heads/main' && secrets.CACHIX_AUTH_TOKEN != '' }}
+      if: github.ref == 'refs/heads/main' && env.CACHIX_AUTH_TOKEN != ''
       with:
         name: claude-code
         authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
@@ -51,7 +53,7 @@ jobs:
         nix build .#claude-code-bun -o result-bun
 
     - name: Push to Cachix
-      if: ${{ github.ref == 'refs/heads/main' && secrets.CACHIX_AUTH_TOKEN != '' }}
+      if: github.ref == 'refs/heads/main' && env.CACHIX_AUTH_TOKEN != ''
       run: |
         nix build .#claude-code --json | jq -r '.[].outputs.out' | cachix push claude-code
         nix build .#claude-code-node --json | jq -r '.[].outputs.out' | cachix push claude-code
