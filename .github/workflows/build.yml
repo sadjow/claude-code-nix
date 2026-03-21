@@ -36,7 +36,7 @@ jobs:
         NIX_FIRST_BUILD_UID: 400
 
     - uses: cachix/cachix-action@3ba601ff5bbb07c7220846facfa2cd81eeee15a1 # v16
-      if: github.ref == 'refs/heads/main'
+      if: ${{ github.ref == 'refs/heads/main' && secrets.CACHIX_AUTH_TOKEN != '' }}
       with:
         name: claude-code
         authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
@@ -51,7 +51,7 @@ jobs:
         nix build .#claude-code-bun -o result-bun
 
     - name: Push to Cachix
-      if: github.ref == 'refs/heads/main'
+      if: ${{ github.ref == 'refs/heads/main' && secrets.CACHIX_AUTH_TOKEN != '' }}
       run: |
         nix build .#claude-code --json | jq -r '.[].outputs.out' | cachix push claude-code
         nix build .#claude-code-node --json | jq -r '.[].outputs.out' | cachix push claude-code

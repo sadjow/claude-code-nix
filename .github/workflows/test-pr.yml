@@ -33,6 +33,7 @@ jobs:
 
       - name: Setup Nix cache
         uses: cachix/cachix-action@3ba601ff5bbb07c7220846facfa2cd81eeee15a1 # v16
+        if: ${{ secrets.CACHIX_AUTH_TOKEN != '' }}
         with:
           name: nix-community
           authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
