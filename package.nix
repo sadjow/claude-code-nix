@@ -58,6 +58,14 @@ let
     }
   else null;
 
+  # Seccomp companion files for the native runtime sandbox
+  sandboxRuntime = if runtime == "native" then
+    fetchurl {
+      url = "https://registry.npmjs.org/@anthropic-ai/sandbox-runtime/-/sandbox-runtime-0.0.42.tgz";
+      sha256 = "00g8wv8lr2i148fmq04sf8yvm9rdim5dk5q2chbjx6ra0n6d9ww3";
+    }
+  else null;
+
   # Pre-fetch the npm package for node/bun runtimes
   claudeCodeTarball = if runtime != "native" then
     fetchurl {
@@ -153,6 +161,7 @@ stdenv.mkDerivation rec {
         --set DISABLE_AUTOUPDATER 1 \
         --set DISABLE_INSTALLATION_CHECKS 1 \
         --set USE_BUILTIN_RIPGREP 0 \
+        --set npm_config_prefix "$out" \
         --prefix PATH : ${
           lib.makeBinPath (
             [
@@ -165,6 +174,15 @@ stdenv.mkDerivation rec {
             ]
           )
         }
+
+      # Install seccomp companion files so the binary can apply BPF socket filters.
+      mkdir -p $out/lib/node_modules/@anthropic-ai/sandbox-runtime
+      tar -xzf ${sandboxRuntime} \
+        --strip-components=1 \
+        -C $out/lib/node_modules/@anthropic-ai/sandbox-runtime \
+        package/vendor/seccomp
+      chmod +x $out/lib/node_modules/@anthropic-ai/sandbox-runtime/vendor/seccomp/x64/apply-seccomp
+      chmod +x $out/lib/node_modules/@anthropic-ai/sandbox-runtime/vendor/seccomp/arm64/apply-seccomp
 
       runHook postInstall
     '' else ''

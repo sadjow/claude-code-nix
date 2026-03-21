@@ -114,6 +114,35 @@ update_native_hash() {
     mv "$temp_file" package.nix
 }
 
+fetch_sandbox_runtime_version() {
+    curl -sf --max-time 10 "$NPM_REGISTRY_URL/@anthropic-ai/sandbox-runtime/latest" | sed -n 's/.*"version":"\([^"]*\)".*/\1/p'
+}
+
+fetch_sandbox_runtime_hash() {
+    local version="$1"
+    local tarball_url="$NPM_REGISTRY_URL/@anthropic-ai/sandbox-runtime/-/sandbox-runtime-$version.tgz"
+    local hash=$(nix-prefetch-url "$tarball_url" 2>/dev/null | tail -1)
+    echo "$hash" | tr -d '\n'
+}
+
+update_sandbox_runtime() {
+    local version="$1"
+    local hash="$2"
+    local temp_file=$(mktemp)
+    awk -v version="$version" -v hash="$hash" '
+        /sandboxRuntime = / { in_block=1 }
+        in_block && /url = / {
+            sub(/sandbox-runtime\/-\/sandbox-runtime-[^"]*\.tgz/, "sandbox-runtime/-/sandbox-runtime-" version ".tgz")
+        }
+        in_block && /sha256 = / {
+            sub(/sha256 = "[^"]*"/, "sha256 = \"" hash "\"")
+            in_block=0
+        }
+        { print }
+    ' package.nix > "$temp_file"
+    mv "$temp_file" package.nix
+}
+
 cleanup_backup_files() {
     rm -f package.nix.bak
 }
@@ -150,6 +179,26 @@ update_to_version() {
         log_info "  $platform: $native_hash"
         update_native_hash "$platform" "$native_hash"
     done
+
+    # Fetch and update sandbox-runtime version and hash
+    log_info "Fetching latest sandbox-runtime version..."
+    local sandbox_version=$(retry "$MAX_RETRIES" "$RETRY_BASE_DELAY" fetch_sandbox_runtime_version)
+    if [ -z "$sandbox_version" ]; then
+        log_error "Failed to fetch latest sandbox-runtime version"
+        mv package.nix.bak package.nix
+        exit 1
+    fi
+    log_info "sandbox-runtime version: $sandbox_version"
+
+    log_info "Fetching sandbox-runtime hash..."
+    local sandbox_hash=$(fetch_sandbox_runtime_hash "$sandbox_version")
+    if [ -z "$sandbox_hash" ]; then
+        log_error "Failed to fetch sandbox-runtime hash"
+        mv package.nix.bak package.nix
+        exit 1
+    fi
+    log_info "sandbox-runtime hash: $sandbox_hash"
+    update_sandbox_runtime "$sandbox_version" "$sandbox_hash"
 
     cleanup_backup_files
 
