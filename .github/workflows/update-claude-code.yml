@@ -2,7 +2,7 @@ name: Update Claude Code Version
 
 on:
   schedule:
-    - cron: '0 * * * *'  # Run every hour
+    - cron: '0 23 * * *'  # Run daily at midnight CET (23:00 UTC)
   workflow_dispatch:  # Allow manual trigger
 
 permissions:
