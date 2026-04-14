@@ -6,6 +6,9 @@
 # - bun: Run via Bun from npm package
 #
 # The native runtime is self-contained and doesn't require Node.js or Bun.
+#
+# Extra packages can be added to the wrapper's PATH via the extraPackages parameter:
+#   claude-code.override { extraPackages = [ pkgs.git pkgs.gh ]; }
 
 { lib
 , stdenv
@@ -24,6 +27,7 @@
 , nativeBinName ? "claude"
 , nodeBinName ? "claude-node"
 , bunBinName ? "claude-bun"
+, extraPackages ? []  # Additional packages to add to the wrapper's PATH
 }:
 
 let
@@ -163,6 +167,7 @@ stdenv.mkDerivation rec {
               bubblewrap
               socat
             ]
+            ++ extraPackages
           )
         }
 
@@ -190,7 +195,7 @@ exec ${selected.npmBin} "$@"
 NPM_EOF
 chmod +x "$_CLAUDE_NPM_WRAPPER"
 
-export PATH="$(dirname "$_CLAUDE_NPM_WRAPPER"):$PATH"
+export PATH="$(dirname "$_CLAUDE_NPM_WRAPPER"):${lib.makeBinPath extraPackages}:$PATH"
 exec ${selected.runCmd} "$out/lib/node_modules/@anthropic-ai/claude-code/cli.js" "$@"
 WRAPPER_EOF
     chmod +x $out/bin/${selected.binName}

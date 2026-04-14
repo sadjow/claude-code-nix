@@ -244,6 +244,40 @@ pkgs.claude-code-bun.override { bunBinName = "cc-bun"; }
 | `nodeBinName` | `claude-node` | Binary name for Node.js runtime |
 | `bunBinName` | `claude-bun` | Binary name for Bun runtime |
 
+### Extra Packages in PATH
+
+You can add extra packages to Claude Code's PATH so they are available for Claude to use as tools:
+
+```nix
+# Add GitHub CLI and Python 3 to Claude's environment
+pkgs.claude-code.override {
+  extraPackages = [
+    pkgs.gh
+    pkgs.python3
+  ];
+}
+```
+
+Use this in your NixOS or Home Manager configuration:
+
+```nix
+# NixOS
+environment.systemPackages = [
+  (pkgs.claude-code.override {
+    extraPackages = [ pkgs.gh pkgs.python3 ];
+  })
+];
+
+# Home Manager
+home.packages = [
+  (pkgs.claude-code.override {
+    extraPackages = [ pkgs.gh pkgs.python3 ];
+  })
+];
+```
+
+This works with all runtime variants (`claude-code`, `claude-code-node`, `claude-code-bun`).
+
 ### Optional: Enable Binary Cache for Faster Installation
 
 To download pre-built binaries instead of compiling:
