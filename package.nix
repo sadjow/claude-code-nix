@@ -92,7 +92,12 @@ let
       pkg = bun;
       runtimeBin = "${bun}/bin/bun";
       npmBin = "${bun}/bin/bun";
-      runCmd = "${bun}/bin/bun run";
+      # --preload installs a shim that works around a bun bug where
+      # http(s).request emits 'response' instead of 'upgrade' for HTTP 101,
+      # which breaks /voice's WebSocket handshake. $out is substituted in
+      # installPhase below. No `run` subcommand: bun executes .js files
+      # directly, and `--preload` must come before a subcommand.
+      runCmd = "${bun}/bin/bun --preload $out/lib/claude-code-nix/bun-ws-upgrade-shim.js";
       nativeBuildInputs = [ bun cacert ]
         ++ lib.optionals stdenv.hostPlatform.isLinux [ patchelf ];
       buildInputs = lib.optionals stdenv.hostPlatform.isLinux [ alsa-lib ];
@@ -153,6 +158,17 @@ stdenv.mkDerivation rec {
         chmod u+w "$audioNode"
         patchelf --set-rpath ${lib.makeLibraryPath [ alsa-lib ]} "$audioNode"
       fi
+      ''}
+      ${lib.optionalString (runtime == "bun") ''
+      # Workaround for a bun runtime bug: http(s).request fires 'response'
+      # instead of 'upgrade' for HTTP 101 Switching Protocols. This breaks
+      # /voice's WebSocket upgrade (the bundled `ws` package emits
+      # 'unexpected-response' with status 101 and the socket never becomes
+      # OPEN). Install a preload that intercepts http(s).request and
+      # re-emits 'upgrade' correctly. See scripts/bun-ws-upgrade-shim.js.
+      mkdir -p $out/lib/claude-code-nix
+      install -m444 ${./scripts/bun-ws-upgrade-shim.js} \
+        $out/lib/claude-code-nix/bun-ws-upgrade-shim.js
       ''}
       runHook postBuild
     '';
