@@ -16,6 +16,8 @@
 , bash
 , makeBinaryWrapper
 , autoPatchelfHook
+, patchelf
+, alsa-lib
 , procps
 , ripgrep
 , bubblewrap
@@ -80,8 +82,9 @@ let
       runtimeBin = "${nodejs_22}/bin/node";
       npmBin = "${nodejs_22}/bin/npm";
       runCmd = "${nodejs_22}/bin/node --no-warnings --enable-source-maps";
-      nativeBuildInputs = [ nodejs_22 cacert ];
-      buildInputs = [];
+      nativeBuildInputs = [ nodejs_22 cacert ]
+        ++ lib.optionals stdenv.hostPlatform.isLinux [ patchelf ];
+      buildInputs = lib.optionals stdenv.hostPlatform.isLinux [ alsa-lib ];
       description = "Claude Code (Node.js) - AI coding assistant in your terminal";
       binName = nodeBinName;
     };
@@ -90,8 +93,9 @@ let
       runtimeBin = "${bun}/bin/bun";
       npmBin = "${bun}/bin/bun";
       runCmd = "${bun}/bin/bun run";
-      nativeBuildInputs = [ bun cacert ];
-      buildInputs = [];
+      nativeBuildInputs = [ bun cacert ]
+        ++ lib.optionals stdenv.hostPlatform.isLinux [ patchelf ];
+      buildInputs = lib.optionals stdenv.hostPlatform.isLinux [ alsa-lib ];
       description = "Claude Code (Bun) - AI coding assistant in your terminal";
       binName = bunBinName;
     };
@@ -138,6 +142,17 @@ stdenv.mkDerivation rec {
       mv $out/lib/node_modules/@anthropic-ai/package $out/lib/node_modules/@anthropic-ai/claude-code
       cd $out/lib/node_modules/@anthropic-ai/claude-code
       ${selected.npmBin} install --production --ignore-scripts
+      ''}
+      ${lib.optionalString stdenv.hostPlatform.isLinux ''
+      # Patch the native audio-capture addon (used by /voice) so it can
+      # find libasound.so.2 at runtime. Without this the .node addon fails
+      # to dlopen and /voice can't record audio.
+      audioArch=${if stdenv.hostPlatform.isAarch64 then "arm64-linux" else "x64-linux"}
+      audioNode="$out/lib/node_modules/@anthropic-ai/claude-code/vendor/audio-capture/$audioArch/audio-capture.node"
+      if [ -f "$audioNode" ]; then
+        chmod u+w "$audioNode"
+        patchelf --set-rpath ${lib.makeLibraryPath [ alsa-lib ]} "$audioNode"
+      fi
       ''}
       runHook postBuild
     '';
