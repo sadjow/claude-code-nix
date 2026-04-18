@@ -48,7 +48,7 @@ let
   };
 
   # Native binary URL
-  nativeBinaryUrl = "https://storage.googleapis.com/claude-code-dist-86c565f3-f756-42ad-8dfa-d59b1c096819/claude-code-releases/${version}/${platform}/claude";
+  nativeBinaryUrl = "https://downloads.claude.ai/claude-code-releases/${version}/${platform}/claude";
 
   # Fetch native binary (only when runtime is native and platform is supported)
   nativeBinary = if runtime == "native" && platform != null then
