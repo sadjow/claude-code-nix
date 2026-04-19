@@ -38,44 +38,15 @@ jobs:
           authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
           skipPush: true
 
-      - name: Build all variants
-        run: |
-          echo "Building claude-code (native)..."
-          nix build .#claude-code -o result-native --print-build-logs
-          echo "Building claude-code-node..."
-          nix build .#claude-code-node -o result-node --print-build-logs
-          echo "Building claude-code-bun..."
-          nix build .#claude-code-bun -o result-bun --print-build-logs
-
-      - name: Test claude versions
-        run: |
-          echo "Testing claude-code (native)..."
-          ./result-native/bin/claude --version
-          echo "Testing claude-code-node..."
-          ./result-node/bin/claude-node --version
-          echo "Testing claude-code-bun..."
-          ./result-bun/bin/claude-bun --version
+      - name: Build claude-code
+        run: nix build .#claude-code -o result --print-build-logs
 
       - name: Verify package contents
         run: |
-          echo "Verifying claude-code (native)..."
-          test -f ./result-native/bin/claude
-          test -f ./result-native/bin/.claude-unwrapped
-          echo "Verifying claude-code-node..."
-          test -f ./result-node/bin/claude-node
-          test -d ./result-node/lib/node_modules/@anthropic-ai/claude-code
-          echo "Verifying claude-code-bun..."
-          test -f ./result-bun/bin/claude-bun
-          test -d ./result-bun/lib/node_modules/@anthropic-ai/claude-code
+          test -f ./result/bin/claude
+          test -f ./result/bin/.claude-unwrapped
 
       - name: Run basic functionality test
         run: |
-          echo "Testing claude-code (native)..."
-          ./result-native/bin/claude --help || true
-          ./result-native/bin/claude --version 2>&1 | grep -E "claude-code|Claude"
-          echo "Testing claude-code-node..."
-          ./result-node/bin/claude-node --help || true
-          ./result-node/bin/claude-node --version 2>&1 | grep -E "claude-code|Claude"
-          echo "Testing claude-code-bun..."
-          ./result-bun/bin/claude-bun --help || true
-          ./result-bun/bin/claude-bun --version 2>&1 | grep -E "claude-code|Claude"
+          ./result/bin/claude --help || true
+          ./result/bin/claude --version 2>&1 | grep -E "claude-code|Claude"

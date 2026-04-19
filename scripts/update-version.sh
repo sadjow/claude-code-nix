@@ -10,7 +10,6 @@ readonly NPM_REGISTRY_URL="https://registry.npmjs.org"
 readonly PACKAGE_NAME="@anthropic-ai/claude-code"
 readonly NATIVE_BASE_URL="https://storage.googleapis.com/claude-code-dist-86c565f3-f756-42ad-8dfa-d59b1c096819/claude-code-releases"
 
-# Native binary platforms
 readonly NATIVE_PLATFORMS=("darwin-arm64" "darwin-x64" "linux-x64" "linux-arm64")
 
 readonly MAX_RETRIES=3
@@ -55,14 +54,6 @@ get_latest_version_from_npm() {
     retry "$MAX_RETRIES" "$RETRY_BASE_DELAY" fetch_npm_version
 }
 
-fetch_tarball_hash() {
-    local version="$1"
-    local tarball_url="$NPM_REGISTRY_URL/$PACKAGE_NAME/-/claude-code-$version.tgz"
-
-    local hash=$(nix-prefetch-url "$tarball_url" 2>/dev/null | tail -1)
-    echo "$hash" | tr -d '\n'
-}
-
 fetch_native_hash() {
     local version="$1"
     local platform="$2"
@@ -77,32 +68,11 @@ update_package_version() {
     sed -i.bak "s/version = \".*\"/version = \"$version\"/" package.nix
 }
 
-update_npm_hash() {
-    local hash="$1"
-    # Update the npm tarball hash (the one after claudeCodeTarball fetchurl)
-    # claudeCodeTarball and fetchurl are on different lines, so we need
-    # to track state across multiple lines
-    local temp_file=$(mktemp)
-    awk -v hash="$hash" '
-        /claudeCodeTarball = / { in_tarball_block=1 }
-        in_tarball_block && /fetchurl/ { in_fetchurl_block=1 }
-        in_fetchurl_block && /sha256 = / {
-            sub(/sha256 = "[^"]*"/, "sha256 = \"" hash "\"")
-            in_tarball_block=0
-            in_fetchurl_block=0
-        }
-        in_tarball_block && /^[[:space:]]*else/ { in_tarball_block=0 }
-        { print }
-    ' package.nix > "$temp_file"
-    mv "$temp_file" package.nix
-}
-
 update_native_hash() {
     local platform="$1"
     local hash="$2"
     local temp_file=$(mktemp)
 
-    # Update the specific platform hash in nativeHashes
     awk -v platform="$platform" -v hash="$hash" '
         /nativeHashes = \{/ { in_native_block=1 }
         in_native_block && $0 ~ "\"" platform "\"" {
@@ -123,21 +93,8 @@ update_to_version() {
 
     log_info "Updating to version $new_version..."
 
-    # Update version in package.nix
     update_package_version "$new_version"
 
-    # Fetch and update npm tarball hash
-    log_info "Fetching npm tarball hash..."
-    local tarball_hash=$(fetch_tarball_hash "$new_version")
-    if [ -z "$tarball_hash" ]; then
-        log_error "Failed to fetch npm tarball hash"
-        mv package.nix.bak package.nix
-        exit 1
-    fi
-    log_info "NPM tarball hash: $tarball_hash"
-    update_npm_hash "$tarball_hash"
-
-    # Fetch and update native binary hashes
     log_info "Fetching native binary hashes..."
     for platform in "${NATIVE_PLATFORMS[@]}"; do
         log_info "  Fetching hash for $platform..."
@@ -153,23 +110,13 @@ update_to_version() {
 
     cleanup_backup_files
 
-    log_info "Verifying builds..."
-
-    # Test native build (default)
-    log_info "  Building claude-code (native)..."
+    log_info "Verifying build..."
     if ! nix build .#claude-code > /dev/null 2>&1; then
-        log_error "Native build verification failed"
+        log_error "Build verification failed"
         return 1
     fi
 
-    # Test node build
-    log_info "  Building claude-code-node..."
-    if ! nix build .#claude-code-node > /dev/null 2>&1; then
-        log_error "Node build verification failed"
-        return 1
-    fi
-
-    log_info "✅ All builds successful!"
+    log_info "Build successful!"
     return 0
 }
 
@@ -272,7 +219,7 @@ main() {
 
     if [ "$check_only" = true ]; then
         log_info "Update available: $current_version → $latest_version"
-        exit 1  # Exit with non-zero to indicate update is available
+        exit 1  # Non-zero signals that an update is available
     fi
 
     update_to_version "$latest_version"
