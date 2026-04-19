@@ -423,7 +423,7 @@ The script automatically:
 If you prefer to update manually:
 
 1. Edit `package.nix` and change the `version` field
-2. For each platform, fetch the native binary hash: `nix-prefetch-url https://storage.googleapis.com/claude-code-dist-86c565f3-f756-42ad-8dfa-d59b1c096819/claude-code-releases/VERSION/PLATFORM/claude`
+2. For each platform, fetch the native binary hash: `nix-prefetch-url https://downloads.claude.ai/claude-code-releases/VERSION/PLATFORM/claude`
 3. Update the matching entry in the `nativeHashes` attribute set
 4. Build and test locally: `nix build && ./result/bin/claude --version`
 5. Update `flake.lock`: `nix flake update`
