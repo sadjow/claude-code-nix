@@ -30,8 +30,14 @@ let
     "linux-arm64" = "12l25dhnkin5wf6kjwcxi97kd5ahvp81zjchxz57sbli5i7bfmlm";
   };
 
+  # Primary host is the Anthropic-branded CDN so users can verify the source;
+  # the GCS bucket is the direct origin and stays as a fallback if the CDN is
+  # unavailable. The sha256 pin guarantees both resolve to identical bytes.
   nativeBinary = fetchurl {
-    url = "https://storage.googleapis.com/claude-code-dist-86c565f3-f756-42ad-8dfa-d59b1c096819/claude-code-releases/${version}/${platform}/claude";
+    urls = [
+      "https://downloads.claude.ai/claude-code-releases/${version}/${platform}/claude"
+      "https://storage.googleapis.com/claude-code-dist-86c565f3-f756-42ad-8dfa-d59b1c096819/claude-code-releases/${version}/${platform}/claude"
+    ];
     sha256 = nativeHashes.${platform};
   };
 in

@@ -8,7 +8,12 @@ readonly NC='\033[0m'
 
 readonly NPM_REGISTRY_URL="https://registry.npmjs.org"
 readonly PACKAGE_NAME="@anthropic-ai/claude-code"
-readonly NATIVE_BASE_URL="https://storage.googleapis.com/claude-code-dist-86c565f3-f756-42ad-8dfa-d59b1c096819/claude-code-releases"
+# Primary CDN is Anthropic-branded so users can verify the source; the GCS
+# bucket is the direct origin and stays as a fallback if the CDN is unavailable.
+readonly NATIVE_BASE_URLS=(
+    "https://downloads.claude.ai/claude-code-releases"
+    "https://storage.googleapis.com/claude-code-dist-86c565f3-f756-42ad-8dfa-d59b1c096819/claude-code-releases"
+)
 
 readonly NATIVE_PLATFORMS=("darwin-arm64" "darwin-x64" "linux-x64" "linux-arm64")
 
@@ -57,10 +62,18 @@ get_latest_version_from_npm() {
 fetch_native_hash() {
     local version="$1"
     local platform="$2"
-    local binary_url="$NATIVE_BASE_URL/$version/$platform/claude"
 
-    local hash=$(nix-prefetch-url "$binary_url" 2>/dev/null | tail -1)
-    echo "$hash" | tr -d '\n'
+    for base_url in "${NATIVE_BASE_URLS[@]}"; do
+        local binary_url="$base_url/$version/$platform/claude"
+        local hash
+        hash=$(nix-prefetch-url "$binary_url" 2>/dev/null | tail -1)
+        if [ -n "$hash" ]; then
+            echo "$hash" | tr -d '\n'
+            return 0
+        fi
+    done
+
+    return 1
 }
 
 update_package_version() {
