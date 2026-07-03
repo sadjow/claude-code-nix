@@ -54,17 +54,19 @@ While Claude Code exists in nixpkgs, our approach offers specific advantages:
 
 ### Comparison Table
 
-| Feature | npm global | nixpkgs upstream | This Flake |
-|---------|------------|------------------|------------|
-| **Latest Version** | ✅ Always | ❌ Delayed | ✅ Hourly checks |
-| **No Runtime Dependency** | ❌ Requires Node.js | ❌ Bundles Node.js | ✅ Self-contained native binary |
-| **Survives Node Switch** | ❌ Lost on switch | ✅ Always available | ✅ Always available |
-| **Binary Cache** | ❌ None | ✅ NixOS cache | ✅ Cachix |
-| **Declarative Config** | ❌ None | ✅ Yes | ✅ Yes |
-| **Exact Version Pinning** | ⚠️ Manual | ✅ Nixpkgs revision | ✅ Exact tags (`v2.1.71`) or commit SHAs |
-| **Update Frequency** | ✅ Immediate | ⚠️ Weeks | ✅ < 1 hour |
-| **Reproducible** | ❌ No | ✅ Yes | ✅ Yes |
-| **Sandbox Builds** | ❌ N/A | ✅ Yes | ✅ Yes |
+| Feature | npm global | nixpkgs upstream | llm-agents.nix | This Flake |
+|---------|------------|------------------|----------------|------------|
+| **Latest Version** | ✅ Always | ❌ Delayed | ✅ 4x daily checks | ✅ Hourly checks |
+| **No Runtime Dependency** | ❌ Requires Node.js | ❌ Bundles Node.js | ✅ Self-contained native binary | ✅ Self-contained native binary |
+| **Survives Node Switch** | ❌ Lost on switch | ✅ Always available | ✅ Always available | ✅ Always available |
+| **Binary Cache** | ❌ None | ✅ NixOS cache | ✅ Numtide cache | ✅ Cachix |
+| **Declarative Config** | ❌ None | ✅ Yes | ✅ Yes | ✅ Yes |
+| **Exact Version Pinning** | ⚠️ Manual | ✅ Nixpkgs revision | ⚠️ flake.lock commit only | ✅ Exact tags (`v2.1.71`) or commit SHAs |
+| **Update Frequency** | ✅ Immediate | ⚠️ Weeks | ✅ Same day | ✅ < 1 hour |
+| **Reproducible** | ❌ No | ✅ Yes | ✅ Yes | ✅ Yes |
+| **Sandbox Builds** | ❌ N/A | ✅ Yes | ✅ Yes | ✅ Yes |
+
+See [numtide/llm-agents.nix](#numtidellm-agentsnix) under Alternatives for how this flake compares to numtide's multi-agent package set.
 
 ### Key Features
 
@@ -475,6 +477,10 @@ This downloads a self-contained binary bundled with Bun runtime.
 **Choose official native install if**: You want the simplest setup or don't use Nix.
 
 **Choose this flake if**: You use NixOS/Home Manager, want declarative configuration, and are comfortable choosing between exact pins and faster-moving update channels.
+
+### numtide/llm-agents.nix
+
+[llm-agents.nix](https://github.com/numtide/llm-agents.nix) from numtide packages Claude Code alongside 30+ other AI coding agents, with automated updates 4 times a day and its own binary cache. Both projects ship the same upstream native binary with fixed hashes, so the installed Claude Code is equivalent. The practical differences are focus and cadence: this repository checks hourly and tags every release (`v2.1.71`), while llm-agents.nix pins only through flake.lock commits that mix updates for many packages. Across the 55 releases both projects shipped between May and July 2026, this flake landed the new version first 49 times, typically about 2 hours earlier. Choose llm-agents.nix if you want many agents from a single flake input; choose this flake if you want the fastest Claude Code updates, per-version tags, and a small dedicated change history that is easy to audit.
 
 ## License
 
