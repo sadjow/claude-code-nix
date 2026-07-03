@@ -62,7 +62,7 @@ While Claude Code exists in nixpkgs, our approach offers specific advantages:
 | **Binary Cache** | ❌ None | ✅ NixOS cache | ✅ Numtide cache | ✅ Cachix |
 | **Declarative Config** | ❌ None | ✅ Yes | ✅ Yes | ✅ Yes |
 | **Exact Version Pinning** | ⚠️ Manual | ✅ Nixpkgs revision | ⚠️ flake.lock commit only | ✅ Exact tags (`v2.1.71`) or commit SHAs |
-| **Update Frequency** | ✅ Immediate | ⚠️ Weeks | ✅ Same day | ✅ < 1 hour |
+| **Update Frequency** | ✅ Immediate | ⚠️ Weeks | ✅ < 6 hours | ✅ < 1 hour |
 | **Reproducible** | ❌ No | ✅ Yes | ✅ Yes | ✅ Yes |
 | **Sandbox Builds** | ❌ N/A | ✅ Yes | ✅ Yes | ✅ Yes |
 
