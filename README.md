@@ -82,7 +82,7 @@ See [numtide/llm-agents.nix](#numtidellm-agentsnix) under Alternatives for how t
 
 ```bash
 # Run Claude Code directly without installing
-nix run github:sadjow/claude-code-nix
+nix --extra-experimental-features 'nix-command flakes' run github:sadjow/claude-code-nix
 ```
 
 ### Install to Your System
