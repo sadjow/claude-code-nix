@@ -78,6 +78,35 @@ See [numtide/llm-agents.nix](#numtidellm-agentsnix) under Alternatives for how t
 
 ## Quick Start
 
+### Nix Flake Prerequisites
+
+This repository uses Nix flakes, which require Nix 2.4 or newer with the
+`nix-command` and `flakes` experimental features enabled.
+
+For a single command, place
+`--extra-experimental-features 'nix-command flakes'` immediately after `nix`,
+as shown below.
+
+To enable these features permanently on NixOS, add this to your system
+configuration and rebuild:
+
+```nix
+{
+  nix.settings.experimental-features = [ "nix-command" "flakes" ];
+}
+```
+
+```bash
+sudo nixos-rebuild switch
+```
+
+For a standalone Nix installation, add this line to
+`~/.config/nix/nix.conf` (or `/etc/nix/nix.conf` for a system-wide setting):
+
+```ini
+experimental-features = nix-command flakes
+```
+
 ### Fastest Installation (Try it now!)
 
 ```bash
@@ -89,12 +118,16 @@ nix --extra-experimental-features 'nix-command flakes' run github:sadjow/claude-
 
 ```bash
 # Install to your profile (survives reboots)
-nix profile install github:sadjow/claude-code-nix
+nix --extra-experimental-features 'nix-command flakes' profile install github:sadjow/claude-code-nix
 ```
 
 ## Standalone Installation (Without Home Manager)
 
 If you're not using Home Manager or NixOS, here's the complete workflow for managing Claude Code with `nix profile`.
+
+These commands assume the experimental features described above are enabled
+permanently. Otherwise, add the same `--extra-experimental-features` option
+immediately after `nix` in each command.
 
 ### Install
 
