@@ -2,8 +2,8 @@
 #
 # This package installs Claude Code with your choice of runtime:
 # - native: Pre-built binary from Anthropic (default, recommended)
-# - node: Run via Node.js from npm package
-# - bun: Run via Bun from npm package
+# - node: Launch the native binary via Node.js (upstream cli-wrapper)
+# - bun:  Launch the native binary via Bun (upstream cli-wrapper)
 #
 # The native runtime is self-contained and doesn't require Node.js or Bun.
 
@@ -50,13 +50,25 @@ let
   # Native binary URL
   nativeBinaryUrl = "https://storage.googleapis.com/claude-code-dist-86c565f3-f756-42ad-8dfa-d59b1c096819/claude-code-releases/${version}/${platform}/claude";
 
-  # Fetch native binary (only when runtime is native and platform is supported)
-  nativeBinary = if runtime == "native" && platform != null then
+  # Fetch native binary. Needed by every runtime now: the native runtime runs
+  # it directly; node/bun launch it via upstream's cli-wrapper.cjs (upstream no
+  # longer ships a JS CLI, only a launcher around this platform binary).
+  nativeBinary = if platform != null then
     fetchurl {
       url = nativeBinaryUrl;
       sha256 = nativeHashes.${platform};
     }
   else null;
+
+  # Upstream delivers the CLI as a platform-specific native binary via
+  # optionalDependencies; cli-wrapper.cjs resolves it by this package name.
+  optDepMap = {
+    "aarch64-darwin" = "claude-code-darwin-arm64";
+    "x86_64-darwin" = "claude-code-darwin-x64";
+    "x86_64-linux" = "claude-code-linux-x64";
+    "aarch64-linux" = "claude-code-linux-arm64";
+  };
+  optDepName = optDepMap.${stdenv.hostPlatform.system} or null;
 
   # Pre-fetch the npm package for node/bun runtimes
   claudeCodeTarball = if runtime != "native" then
@@ -80,7 +92,7 @@ let
       runtimeBin = "${nodejs_22}/bin/node";
       npmBin = "${nodejs_22}/bin/npm";
       runCmd = "${nodejs_22}/bin/node --no-warnings --enable-source-maps";
-      nativeBuildInputs = [ nodejs_22 cacert ];
+      nativeBuildInputs = [ nodejs_22 ] ++ lib.optionals stdenv.hostPlatform.isElf [ autoPatchelfHook ];
       buildInputs = [];
       description = "Claude Code (Node.js) - AI coding assistant in your terminal";
       binName = nodeBinName;
@@ -90,7 +102,7 @@ let
       runtimeBin = "${bun}/bin/bun";
       npmBin = "${bun}/bin/bun";
       runCmd = "${bun}/bin/bun run";
-      nativeBuildInputs = [ bun cacert ];
+      nativeBuildInputs = [ bun ] ++ lib.optionals stdenv.hostPlatform.isElf [ autoPatchelfHook ];
       buildInputs = [];
       description = "Claude Code (Bun) - AI coding assistant in your terminal";
       binName = bunBinName;
@@ -110,8 +122,8 @@ stdenv.mkDerivation rec {
 
   dontUnpack = true;
 
-  # For native runtime: disable stripping which corrupts the Bun trailer
-  dontStrip = runtime == "native";
+  # The native binary is a Bun-compiled single-file exe; stripping corrupts it.
+  dontStrip = true;
 
   nativeBuildInputs = selected.nativeBuildInputs;
   buildInputs = selected.buildInputs;
@@ -122,23 +134,26 @@ stdenv.mkDerivation rec {
       runHook postBuild
     '' else ''
       runHook preBuild
-      export HOME=$TMPDIR
-      mkdir -p $HOME/.npm $HOME/.bun
 
-      export SSL_CERT_FILE=${cacert}/etc/ssl/certs/ca-bundle.crt
-      export NODE_EXTRA_CA_CERTS=$SSL_CERT_FILE
-
-      ${if runtime == "node" then ''
-      ${selected.npmBin} config set cafile $SSL_CERT_FILE
-      ${selected.npmBin} config set offline true
-      ${selected.npmBin} install -g --prefix=$out ${claudeCodeTarball}
-      '' else ''
+      # Extract upstream's launcher package (cli-wrapper.cjs, install.cjs, ...)
       mkdir -p $out/lib/node_modules/@anthropic-ai
       tar -xzf ${claudeCodeTarball} -C $out/lib/node_modules/@anthropic-ai
-      mv $out/lib/node_modules/@anthropic-ai/package $out/lib/node_modules/@anthropic-ai/claude-code
-      cd $out/lib/node_modules/@anthropic-ai/claude-code
-      ${selected.npmBin} install --production --ignore-scripts
-      ''}
+      mv $out/lib/node_modules/@anthropic-ai/package \
+         $out/lib/node_modules/@anthropic-ai/claude-code
+
+      # Supply the platform-native binary where cli-wrapper.cjs resolves it.
+      # Reuse the same binary the native runtime fetches (no extra hashes).
+      mkdir -p $out/lib/node_modules/@anthropic-ai/${optDepName}
+      install -m755 ${nativeBinary} \
+        $out/lib/node_modules/@anthropic-ai/${optDepName}/claude
+      printf '{"name":"@anthropic-ai/%s","version":"%s"}\n' \
+        '${optDepName}' '${version}' \
+        > $out/lib/node_modules/@anthropic-ai/${optDepName}/package.json
+    '' + lib.optionalString (runtime != "native" && stdenv.hostPlatform.isLinux) ''
+      # Guard against Node's libc (musl) detection resolving a -musl variant.
+      ln -s ${optDepName} \
+        $out/lib/node_modules/@anthropic-ai/${optDepName}-musl
+    '' + lib.optionalString (runtime != "native") ''
       runHook postBuild
     '';
 
@@ -191,7 +206,7 @@ NPM_EOF
 chmod +x "$_CLAUDE_NPM_WRAPPER"
 
 export PATH="$(dirname "$_CLAUDE_NPM_WRAPPER"):$PATH"
-exec ${selected.runCmd} "$out/lib/node_modules/@anthropic-ai/claude-code/cli.js" "$@"
+exec ${selected.runCmd} "$out/lib/node_modules/@anthropic-ai/claude-code/cli-wrapper.cjs" "$@"
 WRAPPER_EOF
     chmod +x $out/bin/${selected.binName}
 
@@ -209,7 +224,7 @@ WRAPPER_EOF
     else if runtime == "bun" then
       [ "aarch64-darwin" "aarch64-linux" "x86_64-darwin" "x86_64-linux" ]
     else
-      platforms.all;
+      [ "aarch64-darwin" "x86_64-darwin" "x86_64-linux" "aarch64-linux" ];
     mainProgram = selected.binName;
   };
 }
