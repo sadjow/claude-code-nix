@@ -196,6 +196,29 @@ You can override the binary name when building:
 pkgs.claude-code.override { binName = "cc"; }
 ```
 
+### Optional Dependencies
+
+Two extra tools can be put on the wrapper's `PATH`:
+
+| Option | Default | What it adds |
+|--------|---------|--------------|
+| `withBun` | `true` | `bun`, so Claude Code can run JavaScript/TypeScript without a project-local runtime |
+| `withRtk` | `false` | [`rtk`](https://github.com/rtk-ai/rtk), a CLI proxy that cuts token usage on common dev commands |
+
+```nix
+pkgs.claude-code.override { withRtk = true; }   # enable rtk
+pkgs.claude-code.override { withBun = false; }  # drop bun
+```
+
+Ready-made flake outputs for the same combinations:
+
+```bash
+nix profile install github:sadjow/claude-code-nix#claude-code-with-rtk
+nix profile install github:sadjow/claude-code-nix#claude-code-without-bun
+```
+
+`withBun` falls back to `false` on platforms where nixpkgs has no `bun` build (e.g. `x86_64-darwin`), so it never breaks the build.
+
 ### Optional: Enable Binary Cache for Faster Installation
 
 To download pre-built binaries instead of compiling:

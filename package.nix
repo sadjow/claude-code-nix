@@ -7,7 +7,11 @@
 , ripgrep
 , bubblewrap
 , socat
+, bun
+, rtk
 , binName ? "claude"
+, withBun ? lib.meta.availableOn stdenv.hostPlatform bun
+, withRtk ? false
 }:
 
 let
@@ -73,6 +77,8 @@ stdenv.mkDerivation {
             bubblewrap
             socat
           ]
+          ++ lib.optional withBun bun
+          ++ lib.optional withRtk rtk
         )
       }
 
