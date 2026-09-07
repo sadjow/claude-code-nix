@@ -7,12 +7,13 @@
 , ripgrep
 , bubblewrap
 , socat
-, bun
-, rtk
+, bun ? null
 , binName ? "claude"
-, withBun ? lib.meta.availableOn stdenv.hostPlatform bun
-, withRtk ? false
+, withBun ? false
 }:
+
+assert lib.assertMsg (withBun -> bun != null)
+  "claude-code: withBun requires a bun package, but none was provided by this package set.";
 
 let
   version = "2.1.261";
@@ -78,7 +79,6 @@ stdenv.mkDerivation {
             socat
           ]
           ++ lib.optional withBun bun
-          ++ lib.optional withRtk rtk
         )
       }
 

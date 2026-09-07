@@ -196,28 +196,31 @@ You can override the binary name when building:
 pkgs.claude-code.override { binName = "cc"; }
 ```
 
-### Optional Dependencies
+### Optional Bun
 
-Two extra tools can be put on the wrapper's `PATH`:
+The native CLI does not need Bun, but some plugins do — the [official channel
+plugins](https://code.claude.com/docs/en/channels) among them. `withBun` puts
+`bun` on the wrapper's `PATH` for those cases:
 
 | Option | Default | What it adds |
 |--------|---------|--------------|
-| `withBun` | `true` | `bun`, so Claude Code can run JavaScript/TypeScript without a project-local runtime |
-| `withRtk` | `false` | [`rtk`](https://github.com/rtk-ai/rtk), a CLI proxy that cuts token usage on common dev commands |
+| `withBun` | `false` | `bun`, for plugins and hooks that require a Bun runtime |
 
 ```nix
-pkgs.claude-code.override { withRtk = true; }   # enable rtk
-pkgs.claude-code.override { withBun = false; }  # drop bun
+pkgs.claude-code.override { withBun = true; }
 ```
 
-Ready-made flake outputs for the same combinations:
+Or as a ready-made flake output:
 
 ```bash
-nix profile install github:sadjow/claude-code-nix#claude-code-with-rtk
-nix profile install github:sadjow/claude-code-nix#claude-code-without-bun
+nix profile install github:sadjow/claude-code-nix#claude-code-with-bun
 ```
 
-`withBun` falls back to `false` on platforms where nixpkgs has no `bun` build (e.g. `x86_64-darwin`), so it never breaks the build.
+Bun in your own environment (`home.packages`, `environment.systemPackages`, a
+devShell) works just as well: the wrapper uses `--prefix PATH`, so it does not
+shadow what you already have. `withBun` only matters when you want the runtime
+tied to the Claude Code package itself. Note that nixpkgs has no `bun` build for
+`x86_64-darwin`, so the option cannot be enabled there.
 
 ### Optional: Enable Binary Cache for Faster Installation
 

@@ -32,9 +32,13 @@
         packages.${system} = {
           default = pkgs.claude-code;
           claude-code = pkgs.claude-code;
-          claude-code-with-rtk = pkgs.claude-code.override { withRtk = true; };
-          claude-code-without-bun = pkgs.claude-code.override { withBun = false; };
+          claude-code-with-bun = pkgs.claude-code.override { withBun = true; };
         };
+
+        # Regression guard: the package must still evaluate when the package set
+        # has no bun at all, as long as withBun stays off.
+        checks.${system}.eval-without-bun =
+          lib.callPackageWith (removeAttrs pkgs [ "bun" ]) ./package.nix { };
 
         apps.${system} = {
           default = {
