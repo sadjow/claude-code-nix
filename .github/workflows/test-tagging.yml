@@ -1,0 +1,29 @@
+name: Test Tag Updates
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/create-version-tag.yml'
+      - '.github/workflows/test-tagging.yml'
+      - 'scripts/update-moving-tags.sh'
+      - 'tests/test-update-moving-tags.sh'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/create-version-tag.yml'
+      - '.github/workflows/test-tagging.yml'
+      - 'scripts/update-moving-tags.sh'
+      - 'tests/test-update-moving-tags.sh'
+
+permissions:
+  contents: read
+
+jobs:
+  test-tagging:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Check shell syntax
+        run: bash -n scripts/update-moving-tags.sh tests/test-update-moving-tags.sh
+      - name: Test atomic tag updates
+        run: bash tests/test-update-moving-tags.sh
