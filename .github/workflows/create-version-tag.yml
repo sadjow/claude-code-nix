@@ -9,14 +9,17 @@ on:
 permissions:
   contents: write
 
-concurrency:
-  group: create-version-tag
-  cancel-in-progress: false
-
 jobs:
   create-tag:
     if: github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # Only eligible tag jobs share the queue; failed builds must not displace them.
+    concurrency:
+      group: create-version-tag
+      cancel-in-progress: false
+      # Preserve pending releases instead of replacing the previous pending job.
+      queue: max
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
