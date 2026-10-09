@@ -13,6 +13,13 @@ jobs:
   create-tag:
     if: github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # Only eligible tag jobs share the queue; failed builds must not displace them.
+    concurrency:
+      group: create-version-tag
+      cancel-in-progress: false
+      # Preserve pending releases instead of replacing the previous pending job.
+      queue: max
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -53,25 +60,9 @@ jobs:
           echo "major=$MAJOR" >> $GITHUB_OUTPUT
 
       - name: Update moving tags
-        run: |
-          VERSION="${{ steps.version.outputs.version }}"
-          MAJOR="${{ steps.major.outputs.major }}"
-
-          # Delete remote tags if they exist (moving tags need force update)
-          git push origin :refs/tags/latest 2>/dev/null || true
-          git push origin :refs/tags/v$MAJOR 2>/dev/null || true
-
-          # Delete local tags if they exist
-          git tag -d latest 2>/dev/null || true
-          git tag -d v$MAJOR 2>/dev/null || true
-
-          # Create new annotated tags
-          git tag -a "latest" -m "Latest release: v$VERSION"
-          git tag -a "v$MAJOR" -m "Latest v$MAJOR release: v$VERSION"
-
-          # Push the moving tags
-          git push origin latest
-          git push origin "v$MAJOR"
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: bash scripts/update-moving-tags.sh "$VERSION"
 
       - name: Summary
         run: |
