@@ -332,11 +332,11 @@ This repository is optimized for fast Claude Code updates. That makes the trust 
 - `package.nix` fetches the native binaries with fixed hashes, so a build only succeeds if the downloaded artifacts match the expected content.
 - `flake.lock` pins the flake inputs for a given repository revision.
 - The packaged binary disables Claude's built-in auto-updater, so updates happen through Nix rather than self-modification.
-- CI builds and smoke-tests the package before update PRs land on `main`.
+- The update workflow builds the package on Linux before it opens a version bump PR, and CI builds and smoke-tests the merged commit on Ubuntu and macOS before any release tag moves.
 
 ### What still requires trust
 
-- Trusting this repo means trusting the maintainer account and the GitHub Actions update workflow that creates and auto-merges version bump PRs.
+- Trusting this repo means trusting the maintainer account and the GitHub Actions update workflow that creates and merges version bump PRs without waiting for pull request checks.
 - The upstream artifacts still come from Anthropic's npm package and native binary distribution.
 - Using the `claude-code` Cachix cache adds trust in this project's substituter key. Building locally avoids that extra trust layer.
 - Moving refs such as `main`, `v2`, and `latest` trade stricter change control for convenience and freshness.
@@ -417,11 +417,12 @@ nix develop
 
 This repository uses GitHub Actions to automatically check for new Claude Code versions every hour. When a new version is detected:
 
-1. A pull request is automatically created with the version update
-2. The tarball hash is automatically calculated
-3. Tests run on both Ubuntu and macOS to verify the build
-4. The PR auto-merges if all checks pass
-5. Version tags are automatically created (`vX.Y.Z`, `vX`, `latest`)
+1. The update script fetches the native binary hashes and verifies the build on Linux
+2. A pull request with the version update is created and squash-merged right away, because `main` has no required checks
+3. The merged commit is built and smoke-tested on both Ubuntu and macOS and pushed to Cachix
+4. Version tags are created and moved only after that build succeeds (`vX.Y.Z`, `vX`, `latest`)
+
+The update branch is deleted on merge, so its pull request checks can show as failed with no jobs. The release gate is the build on `main`, and following `main` directly can pick up a version bump before that build has finished.
 
 The automated update workflow runs:
 - Every hour (at the top of the hour)

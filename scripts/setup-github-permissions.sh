@@ -40,7 +40,7 @@ To complete the setup, you need to manually configure the following in GitHub:
 
 This will allow the automated update workflow to:
 - Create pull requests
-- Automatically merge them when CI passes
+- Merge them right away unless the branch requires status checks
 
 ================================================================
 
