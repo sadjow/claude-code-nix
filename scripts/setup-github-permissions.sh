@@ -32,15 +32,9 @@ To complete the setup, you need to manually configure the following in GitHub:
 4. Check: "Allow GitHub Actions to create and approve pull requests"
 5. Click "Save"
 
-### Step 2: Enable Auto-Merge
-1. Go to: https://github.com/$REPO/settings
-2. Under "Pull Requests" section
-3. Check: "Allow auto-merge"
-4. Click "Save"
-
 This will allow the automated update workflow to:
 - Create pull requests
-- Merge them right away unless the branch requires status checks
+- Merge them right away, because main has no required status checks
 
 ================================================================
 

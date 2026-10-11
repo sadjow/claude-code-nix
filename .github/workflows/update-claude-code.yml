@@ -87,12 +87,23 @@ jobs:
             dependencies
             automated
       
-      - name: Enable Auto-Merge
+      - name: Merge pull request
         if: steps.check.outputs.update_needed == 'true' && steps.create-pr.outputs.pull-request-number
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PULL_REQUEST_NUMBER: ${{ steps.create-pr.outputs.pull-request-number }}
         run: |
-          gh pr merge ${{ steps.create-pr.outputs.pull-request-number }} --auto --squash --delete-branch
+          # The merge has to land before this run ends: the chained build on main
+          # only fires for this run, and GitHub may still be computing mergeability.
+          for attempt in $(seq 1 12); do
+            if gh pr merge "$PULL_REQUEST_NUMBER" --squash --delete-branch; then
+              exit 0
+            fi
+            echo "Merge attempt $attempt did not succeed; retrying in 10s"
+            sleep 10
+          done
+          echo "::error::Pull request #$PULL_REQUEST_NUMBER could not be merged"
+          exit 1
 
       - name: Summary
         if: always()
