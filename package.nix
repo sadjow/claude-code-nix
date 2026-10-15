@@ -11,7 +11,7 @@
 }:
 
 let
-  version = "2.1.300";
+  version = "2.1.301";
 
   platformMap = {
     "aarch64-darwin" = "darwin-arm64";
@@ -24,10 +24,10 @@ let
     (throw "Claude Code is not supported on ${stdenv.hostPlatform.system}. Supported: aarch64-darwin, x86_64-darwin, x86_64-linux, aarch64-linux");
 
   nativeHashes = {
-    "darwin-arm64" = "1lz2b8gc1v09yxc8rxwdadaqkjby51qs13r95y533qqilv51fma7";
-    "darwin-x64" = "1csnffka6cav11y6jiccncbkyz91kqsvj6s9f38bnw1yhqvgq92q";
-    "linux-x64" = "0lsl472swylp2hdlg6jb63fnyfrh965l6g2hyiwy9bm9pfhfnkb7";
-    "linux-arm64" = "19m0by6zmzwnipi79w8ak864v4nff4cv06l3ymmr6mm15np9a8mf";
+    "darwin-arm64" = "16bb4w03f1qzf0llqcwrli4lvilgml5ayqx82skx1r143jgcc10z";
+    "darwin-x64" = "0w8q9ph10graw7w99s7y0qzackwir9ca1iapypfgsqp9zixl4f9l";
+    "linux-x64" = "08njpj4sjcnra6slq1xfdq56xx0wssajbyczi1yrrdf7hacss6mw";
+    "linux-arm64" = "1w04hrxsqyg1ird8v1bsdxwyi1hm0f7451lqbyx5klq2m0v9048y";
   };
 
   # Primary host is the Anthropic-branded CDN so users can verify the source;
