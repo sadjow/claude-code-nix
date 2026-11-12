@@ -2,3 +2,4 @@ result
 result-*
 .direnv
 .envrc
+__pycache__/
