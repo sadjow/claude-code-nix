@@ -123,6 +123,17 @@ class CreateVersionTagStepsTest(unittest.TestCase):
                              f'A rerun of the 2.1.0 build must not move {tag} back')
             self.assertIn(f'| {tag} | {self.release_2_2_0[:7]} (newer release, unchanged) |', summary)
 
+    def test_rerun_of_build_leaves_missing_tag_missing_and_reports_it(self):
+        self.publish_tags(self.release_2_2_0, 'v2.2.0', 'v2')
+
+        summary = self.run_tag_steps(self.release_2_1_0, '2.1.0', 'true',
+                                     ['Configure git', 'Update moving tags', 'Summary'])
+
+        self.assertEqual(self.git(self.origin, 'tag', '--list', 'latest'), '',
+                         'A rerun of the 2.1.0 build must not recreate latest behind 2.2.0')
+        self.assertEqual(self.published_commit('v2'), self.release_2_2_0)
+        self.assertIn('| latest | (missing; newer release already tagged) |', summary)
+
     def test_release_moves_both_tags_and_reports_them(self):
         self.publish_tags(self.release_2_1_0, 'latest', 'v2')
 

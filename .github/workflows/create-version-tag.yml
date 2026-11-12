@@ -96,12 +96,15 @@ jobs:
             else
               echo "| v$VERSION | (already exists) |"
             fi
-            # The helper leaves a moving tag on a newer release when an older build
-            # reruns, so report where each tag points on GitHub.
+            # When an older build reruns, the helper leaves a moving tag on a newer
+            # release and does not recreate a missing one behind it, so report
+            # where each tag points on GitHub.
             for tag in "v$MAJOR" latest; do
               published_commit=$(git ls-remote origin "refs/tags/$tag^{}" | cut -f1)
               if [ "$published_commit" == "$HEAD_COMMIT" ]; then
                 echo "| $tag | v$VERSION |"
+              elif [ -z "$published_commit" ]; then
+                echo "| $tag | (missing; newer release already tagged) |"
               else
                 echo "| $tag | ${published_commit:0:7} (newer release, unchanged) |"
               fi

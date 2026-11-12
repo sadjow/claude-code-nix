@@ -38,6 +38,29 @@ newer_release_published() {
   return "$ancestry"
 }
 
+release_tag_pattern() {
+  case $1 in
+    latest) echo 'refs/tags/v*' ;;
+    *) echo "refs/tags/$1.*" ;;
+  esac
+}
+
+# A missing channel has no published commit to compare with, so the release
+# tags in its scope stand in for it: recreating the channel behind a release
+# already tagged on a newer commit would move its users back. Callers test the
+# result, which suspends errexit here, so each failure exits explicitly.
+newer_release_tagged() {
+  local pattern commits commit
+  pattern=$(release_tag_pattern "$1")
+  git fetch --quiet origin "+$pattern:$pattern" || exit 1
+  commits=$(git for-each-ref --contains HEAD \
+    --format='%(if)%(*objectname)%(then)%(*objectname)%(else)%(objectname)%(end)' "$pattern") || exit 1
+  for commit in $commits; do
+    [[ $commit == "$HEAD_COMMIT" ]] || return 0
+  done
+  return 1
+}
+
 LEASES=()
 REFSPECS=()
 for name in latest "v$MAJOR"; do
@@ -51,6 +74,9 @@ for name in latest "v$MAJOR"; do
       echo "$name already points to the newer commit $published_commit; leaving it unchanged"
       continue
     fi
+  elif newer_release_tagged "$name"; then
+    echo "$name is missing and a newer release is already tagged; leaving it missing"
+    continue
   fi
   git tag -f -a "$name" -m "$(tag_message "$name")" HEAD
   LEASES+=("--force-with-lease=refs/tags/$name:$published_sha")
