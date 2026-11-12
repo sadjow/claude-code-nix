@@ -11,7 +11,12 @@ permissions:
 
 jobs:
   create-tag:
-    if: github.event.workflow_run.conclusion == 'success'
+    # The branch filter above matches the head branch of the triggering run, so a
+    # fork pull request opened from a branch named main would also arrive here.
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event != 'pull_request' &&
+      github.event.workflow_run.head_repository.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 10
     # Only eligible tag jobs share the queue; failed builds must not displace them.
@@ -25,11 +30,16 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
+          ref: ${{ github.event.workflow_run.head_sha }}
 
       - name: Extract version from package.nix
         id: version
         run: |
           VERSION=$(sed -n 's/.*version = "\([^"]*\)".*/\1/p' package.nix | head -1)
+          if [[ ! $VERSION =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::package.nix does not declare a release version: '$VERSION'"
+            exit 1
+          fi
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "tag=v$VERSION" >> $GITHUB_OUTPUT
 
@@ -62,18 +72,41 @@ jobs:
       - name: Update moving tags
         env:
           VERSION: ${{ steps.version.outputs.version }}
-        run: bash scripts/update-moving-tags.sh "$VERSION"
+          WORKFLOW_SHA: ${{ github.workflow_sha }}
+        # A rerun of a build that predates the helper checks out a commit without
+        # it, so the helper always comes from the revision of this workflow.
+        run: |
+          git show "$WORKFLOW_SHA:scripts/update-moving-tags.sh" > "$RUNNER_TEMP/update-moving-tags.sh"
+          bash "$RUNNER_TEMP/update-moving-tags.sh" "$VERSION"
 
       - name: Summary
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          MAJOR: ${{ steps.major.outputs.major }}
+          TAG_EXISTS: ${{ steps.check-tag.outputs.exists }}
         run: |
-          echo "## Tag Summary" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Tag | Points To |" >> $GITHUB_STEP_SUMMARY
-          echo "|-----|-----------|" >> $GITHUB_STEP_SUMMARY
-          if [ "${{ steps.check-tag.outputs.exists }}" == "false" ]; then
-            echo "| v${{ steps.version.outputs.version }} | $(git rev-parse --short HEAD) |" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "| v${{ steps.version.outputs.version }} | (already exists) |" >> $GITHUB_STEP_SUMMARY
-          fi
-          echo "| v${{ steps.major.outputs.major }} | v${{ steps.version.outputs.version }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| latest | v${{ steps.version.outputs.version }} |" >> $GITHUB_STEP_SUMMARY
+          HEAD_COMMIT=$(git rev-parse HEAD)
+          {
+            echo "## Tag Summary"
+            echo ""
+            echo "| Tag | Points To |"
+            echo "|-----|-----------|"
+            if [ "$TAG_EXISTS" == "false" ]; then
+              echo "| v$VERSION | ${HEAD_COMMIT:0:7} |"
+            else
+              echo "| v$VERSION | (already exists) |"
+            fi
+            # When an older build reruns, the helper leaves a moving tag on a newer
+            # release and does not recreate a missing one behind it, so report
+            # where each tag points on GitHub.
+            for tag in "v$MAJOR" latest; do
+              published_commit=$(git ls-remote origin "refs/tags/$tag^{}" | cut -f1)
+              if [ "$published_commit" == "$HEAD_COMMIT" ]; then
+                echo "| $tag | v$VERSION |"
+              elif [ -z "$published_commit" ]; then
+                echo "| $tag | (missing; newer release already tagged) |"
+              else
+                echo "| $tag | ${published_commit:0:7} (newer release, unchanged) |"
+              fi
+            done
+          } >> "$GITHUB_STEP_SUMMARY"

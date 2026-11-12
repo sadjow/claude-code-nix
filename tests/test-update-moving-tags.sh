@@ -262,6 +262,159 @@ SHIM
     done
 }
 
+test_older_build_rerun_keeps_newer_release() {
+    make_fixture
+    seed_moving_tags
+    local older_commit
+    older_commit=$(local_git rev-parse HEAD)
+    advance_head
+    run_successfully 2.2.0
+    assert_moving_tags
+    local newer_latest newer_major
+    newer_latest=$(remote_git rev-parse refs/tags/latest)
+    newer_major=$(remote_git rev-parse refs/tags/v2)
+
+    # Rerunning the older release's tag job must not move the channels back.
+    local_git checkout --quiet --detach "$older_commit"
+    : > "$RECEIVE_LOG"
+    run_script 2.1.0 || fail 'older build rerun unexpectedly failed'
+    grep -q 'leaving moving tags unchanged' "$RUN_LOG" || fail 'older build rerun did not report the newer release'
+    assert_equal "$newer_latest" "$(remote_git rev-parse refs/tags/latest)" 'latest was moved back to an older release'
+    assert_equal "$newer_major" "$(remote_git rev-parse refs/tags/v2)" 'v2 was moved back to an older release'
+    [[ ! -s "$RECEIVE_LOG" ]] || fail 'older build rerun attempted a push'
+    assert_immutable_refs
+}
+
+test_older_build_rerun_leaves_missing_channel_missing() {
+    local missing present present_sha older_commit
+    for missing in latest v2; do
+        make_fixture
+        seed_moving_tags
+        older_commit=$(local_git rev-parse HEAD)
+        advance_head
+        # Another runner published the newer release, so only GitHub has its tag.
+        local_git tag -a v2.2.0 -m 'Newer release'
+        local_git push --quiet origin refs/tags/v2.2.0
+        local_git tag -d v2.2.0 >/dev/null
+        run_successfully 2.2.0
+        assert_moving_tags
+        remote_git update-ref -d "refs/tags/$missing"
+        present=latest
+        [[ $missing == latest ]] && present=v2
+        present_sha=$(remote_git rev-parse "refs/tags/$present")
+
+        # Rerunning the older release's tag job must not recreate the missing
+        # channel behind the newer release.
+        local_git checkout --quiet --detach "$older_commit"
+        : > "$RECEIVE_LOG"
+        run_script 2.1.0 || fail 'older build rerun unexpectedly failed'
+        if remote_git show-ref --verify --quiet "refs/tags/$missing"; then
+            fail "$missing was recreated at an older release"
+        fi
+        assert_equal "$present_sha" "$(remote_git rev-parse "refs/tags/$present")" "$present was moved back to an older release"
+        [[ ! -s "$RECEIVE_LOG" ]] || fail 'older build rerun attempted a push'
+        assert_immutable_refs
+    done
+}
+
+test_older_major_retry_advances_its_channel() {
+    make_fixture
+    seed_moving_tags
+    advance_head
+    local skipped_commit=$TARGET_COMMIT
+    advance_head
+    run_successfully 12.0.0
+    assert_moving_tags v12
+    local newer_latest
+    newer_latest=$(remote_git rev-parse refs/tags/latest)
+
+    # Retrying the 2.2.0 tag job after 12.0.0 shipped must advance v2 alone.
+    local_git checkout --quiet --detach "$skipped_commit"
+    : > "$RECEIVE_LOG"
+    run_script 2.2.0 || fail 'older major retry unexpectedly failed'
+    assert_equal "$newer_latest" "$(remote_git rev-parse refs/tags/latest)" 'latest was moved back to an older major'
+    assert_equal tag "$(remote_git cat-file -t refs/tags/v2)" 'v2 remote tag is not annotated'
+    assert_equal "$skipped_commit" "$(remote_git rev-parse 'refs/tags/v2^{}')" 'v2 was not advanced to the retried release'
+    assert_equal "$(local_git rev-parse refs/tags/v2)" "$(remote_git rev-parse refs/tags/v2)" 'v2 local and remote tag objects differ'
+    assert_equal 1 "$(grep -c '^BEGIN$' "$RECEIVE_LOG")" 'expected exactly one push transaction'
+    assert_equal refs/tags/v2 "$(awk 'NF == 3 { print $3 }' "$RECEIVE_LOG")" 'push touched refs other than v2'
+    assert_immutable_refs
+}
+
+test_failed_refresh_aborts_publication() {
+    make_fixture
+    seed_moving_tags
+    advance_head
+    run_successfully 2.2.0
+    assert_moving_tags
+    local newer_latest newer_major
+    newer_latest=$(remote_git rev-parse refs/tags/latest)
+    newer_major=$(remote_git rev-parse refs/tags/v2)
+
+    # An older checkout whose local channel tags lag the remote must not
+    # publish from those stale tags when refreshing them fails.
+    local_git checkout --quiet --detach "$INITIAL_COMMIT"
+    local_git tag -f latest "$INITIAL_COMMIT" >/dev/null
+    local_git tag -f v2 "$INITIAL_COMMIT" >/dev/null
+    local broken_git="$FIXTURE/broken-git"
+    mkdir "$broken_git"
+    cat > "$broken_git/git" <<WRAPPER
+#!/usr/bin/env bash
+if [[ \$1 == fetch ]]; then
+    echo 'fatal: simulated fetch failure' >&2
+    exit 128
+fi
+exec "$(command -v git)" "\$@"
+WRAPPER
+    chmod +x "$broken_git/git"
+    : > "$RECEIVE_LOG"
+    if PATH="$broken_git:$PATH" run_script 2.1.0; then
+        fail 'publication succeeded although the channel refresh failed'
+    fi
+    assert_equal "$newer_latest" "$(remote_git rev-parse refs/tags/latest)" 'latest was moved back after a failed refresh'
+    assert_equal "$newer_major" "$(remote_git rev-parse refs/tags/v2)" 'v2 was moved back after a failed refresh'
+    [[ ! -s "$RECEIVE_LOG" ]] || fail 'a push was attempted after a failed refresh'
+    assert_immutable_refs
+}
+
+test_failed_release_tag_refresh_aborts_recreation() {
+    make_fixture
+    seed_moving_tags
+    advance_head
+    run_successfully 2.2.0
+    assert_moving_tags
+    local newer_major
+    newer_major=$(remote_git rev-parse refs/tags/v2)
+    remote_git update-ref -d refs/tags/latest
+
+    # With stale local tags, a missing channel must not be recreated when the
+    # release tags that would show a newer release cannot be refreshed.
+    local_git checkout --quiet --detach "$INITIAL_COMMIT"
+    local_git tag -d latest >/dev/null
+    local_git tag -f v2 "$INITIAL_COMMIT" >/dev/null
+    local broken_git="$FIXTURE/broken-git"
+    mkdir "$broken_git"
+    cat > "$broken_git/git" <<WRAPPER
+#!/usr/bin/env bash
+if [[ \$1 == fetch && \$* == *'*'* ]]; then
+    echo 'fatal: simulated release tag fetch failure' >&2
+    exit 128
+fi
+exec "$(command -v git)" "\$@"
+WRAPPER
+    chmod +x "$broken_git/git"
+    : > "$RECEIVE_LOG"
+    if PATH="$broken_git:$PATH" run_script 2.1.0; then
+        fail 'a missing channel was recreated although the release tag refresh failed'
+    fi
+    if remote_git show-ref --verify --quiet refs/tags/latest; then
+        fail 'latest was recreated after a failed release tag refresh'
+    fi
+    assert_equal "$newer_major" "$(remote_git rev-parse refs/tags/v2)" 'v2 changed after a failed release tag refresh'
+    [[ ! -s "$RECEIVE_LOG" ]] || fail 'a push was attempted after a failed release tag refresh'
+    assert_immutable_refs
+}
+
 test_invalid_versions() {
     make_fixture
     seed_moving_tags
@@ -294,5 +447,10 @@ run_test 'derives a multi-digit major without changing older release channels' t
 run_test 'rejecting one tag leaves both remote tags unchanged; retry succeeds' test_atomic_rejection
 run_test 'restores either missing moving tag' test_missing_tag_restoration
 run_test 'concurrent changes to existing or missing tags are preserved by leases' test_concurrent_publication
+run_test 'rerunning an older build leaves a newer release in place' test_older_build_rerun_keeps_newer_release
+run_test 'rerunning an older build leaves a channel missing behind a newer release' test_older_build_rerun_leaves_missing_channel_missing
+run_test 'retrying an older major advances only its own channel' test_older_major_retry_advances_its_channel
+run_test 'a failed channel refresh aborts before any push' test_failed_refresh_aborts_publication
+run_test 'a failed release tag refresh aborts before recreating a missing channel' test_failed_release_tag_refresh_aborts_recreation
 run_test 'invalid versions change no refs and attempt no push' test_invalid_versions
 printf '\nAll moving-tag regression tests passed.\n'

@@ -50,6 +50,7 @@
             nixpkgs-fmt
             nix-prefetch-git
             cachix
+            (python3.withPackages (ps: [ ps.pyyaml ]))
           ];
         };
       }) // {
