@@ -6,19 +6,19 @@ workflows:
     '.github/workflows/build.yml':
         - 'actions/checkout@v7.0.1'
         - 'cachix/cachix-action@v17'
-        - 'cachix/install-nix-action@v31.11.3'
+        - 'cachix/install-nix-action@v31.11.4'
     '.github/workflows/create-version-tag.yml':
         - 'actions/checkout@v7.0.1'
     '.github/workflows/test-pr.yml':
         - 'actions/checkout@v7.0.1'
         - 'cachix/cachix-action@v17'
-        - 'cachix/install-nix-action@v31.11.3'
+        - 'cachix/install-nix-action@v31.11.4'
     '.github/workflows/test-tagging.yml':
         - 'actions/checkout@v7.0.1'
-        - 'cachix/install-nix-action@v31.11.3'
+        - 'cachix/install-nix-action@v31.11.4'
     '.github/workflows/update-claude-code.yml':
         - 'actions/checkout@v7.0.1'
-        - 'cachix/install-nix-action@v31.11.3'
+        - 'cachix/install-nix-action@v31.11.4'
         - 'peter-evans/create-pull-request@v8.1.1'
     '.github/workflows/verify-lockfile.yml':
         - 'actions/checkout@v7.0.1'
@@ -33,9 +33,9 @@ dependencies:
         commit: 'sha1-38b082610b782e7e93e209c35fd730d399dee866'
         owner_id: 36824654
         repo_id: 211717886
-    'cachix/install-nix-action@v31.11.3':
-        ref: 'v31.11.3'
-        commit: 'sha1-75c75c31ebece974e48ebc36b4ad125bd97bd97b'
+    'cachix/install-nix-action@v31.11.4':
+        ref: 'v31.11.4'
+        commit: 'sha1-91f6a0f59e94dfb2cfed0f4000f36a68ead1d20c'
         owner_id: 36824654
         repo_id: 212301524
     'peter-evans/create-pull-request@v8.1.1':
