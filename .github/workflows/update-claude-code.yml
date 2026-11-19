@@ -51,7 +51,7 @@ jobs:
       - name: Create Pull Request
         if: steps.check.outputs.update_needed == 'true'
         id: create-pr
-        uses: peter-evans/create-pull-request@v8.1.1
+        uses: peter-evans/create-pull-request@v8.1.3
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           commit-message: "chore: update claude-code to version ${{ steps.check.outputs.latest }}"
